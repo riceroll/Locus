@@ -1,50 +1,101 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+import { useEffect, useRef, useState } from "react";
+import { LayoutList, Columns3, Calendar } from "lucide-react";
+import { ListView } from "./components/views/ListView";
+import { CalendarView } from "./components/views/CalendarView";
+import { KanbanView } from "./components/views/KanbanView";
+import { ProjectsPage } from "./components/views/ProjectsPage";
+import { TimerBar } from "./components/timer/TimerBar";
+import { Sidebar } from "./components/layout/Sidebar";
+import { SettingsModal } from "./components/SettingsModal";
+import { useViewStore } from "./store/useViewStore";
+import { useSettingsStore } from "./store/useSettingsStore";
+import { t } from "./i18n";
+
+type ViewType = 'list' | 'calendar' | 'kanban';
+
+const VIEW_ICONS: Record<ViewType, React.FC<{ className?: string }>> = {
+  list: LayoutList,
+  kanban: Columns3,
+  calendar: Calendar,
+};
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const { activeViewType, activePage, setViewType } = useViewStore();
+  const { initTheme, language } = useSettingsStore();
+  const [sidebarWidth, setSidebarWidth] = useState(224);
+  const [showSettings, setShowSettings] = useState(false);
+  const startXRef = useRef(0);
+  const startWRef = useRef(0);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  // Apply theme on first render
+  useEffect(() => { initTheme(); }, []);
+
+  const startSidebarResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startXRef.current = e.clientX;
+    startWRef.current = sidebarWidth;
+    const onMove = (ev: MouseEvent) => {
+      const newW = Math.max(160, Math.min(400, startWRef.current + ev.clientX - startXRef.current));
+      setSidebarWidth(newW);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+    <div className="flex h-screen bg-slate-50 dark:bg-neutral-900 overflow-hidden">
+      <div style={{ width: sidebarWidth, flexShrink: 0 }} className="relative flex flex-col">
+        <Sidebar onOpenSettings={() => setShowSettings(true)} />
+        <div
+          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand-400/40 active:bg-brand-400/60 transition-colors z-10"
+          onMouseDown={startSidebarResize}
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+      </div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <TimerBar />
+        {activePage === 'projects' ? (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ProjectsPage />
+          </div>
+        ) : (
+          <>
+            <div className="border-b-2 border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-6 flex items-center">
+              <nav className="flex gap-0.5">
+                {(['list', 'kanban', 'calendar'] as ViewType[]).map(view => {
+                  const Icon = VIEW_ICONS[view];
+                  const active = activeViewType === view;
+                  return (
+                    <button
+                      key={view}
+                      onClick={() => setViewType(view)}
+                      className={`flex items-center gap-1.5 px-3.5 py-2.5 text-sm font-medium capitalize transition border-b-2 -mb-[2px] rounded-t ${
+                        active
+                          ? 'border-brand-500 text-brand-600 dark:text-brand-400'
+                          : 'border-transparent text-slate-500 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-700/50 hover:border-slate-200 dark:hover:border-neutral-600'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {t(language, view === 'list' ? 'tab_view_list' : view === 'kanban' ? 'tab_view_kanban' : 'tab_view_calendar')}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+            <div className={`flex-1 min-h-0 ${activeViewType === 'calendar' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+              {activeViewType === 'list' && <ListView />}
+              {activeViewType === 'kanban' && <KanbanView />}
+              {activeViewType === 'calendar' && <CalendarView />}
+            </div>
+          </>
+        )}
+      </div>
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+    </div>
   );
 }
 
