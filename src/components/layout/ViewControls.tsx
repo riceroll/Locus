@@ -24,7 +24,11 @@ export const ViewControls = () => {
   const { language } = useSettingsStore();
 
   const [open, setOpen] = useState(false);
-  const [draftFilters, setDraftFilters] = useState<ViewFilters>(activeFilters);
+  const [draftFilters, setDraftFilters] = useState<ViewFilters>({
+    rules: activeFilters.rules,
+    actionableOnly: activeFilters.actionableOnly ?? false,
+    viewableOnly: activeFilters.viewableOnly ?? false,
+  });
   const [newStatusName, setNewStatusName] = useState('');
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [saveName, setSaveName] = useState('');
@@ -60,7 +64,11 @@ export const ViewControls = () => {
   }, []);
 
   useEffect(() => {
-    setDraftFilters(activeFilters);
+    setDraftFilters({
+      rules: activeFilters.rules,
+      actionableOnly: activeFilters.actionableOnly ?? false,
+      viewableOnly: activeFilters.viewableOnly ?? false,
+    });
   }, [activeFilters]);
 
   const statusOptions = useMemo(() => statuses.map((s) => ({ value: s.id, label: s.name })), [statuses]);
@@ -244,6 +252,27 @@ export const ViewControls = () => {
               })}
             </div>
 
+            <div className="mt-4 space-y-2 border-t border-slate-200 dark:border-neutral-700 pt-3">
+              <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-neutral-200">
+                <input
+                  type="checkbox"
+                  checked={draftFilters.actionableOnly ?? false}
+                  onChange={(e) => setDraftFilters({ ...draftFilters, actionableOnly: e.target.checked })}
+                  className="w-3.5 h-3.5"
+                />
+                {t(language, 'filter_actionable_only')}
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-neutral-200">
+                <input
+                  type="checkbox"
+                  checked={draftFilters.viewableOnly ?? false}
+                  onChange={(e) => setDraftFilters({ ...draftFilters, viewableOnly: e.target.checked })}
+                  className="w-3.5 h-3.5"
+                />
+                {t(language, 'filter_viewable_only')}
+              </label>
+            </div>
+
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
@@ -255,8 +284,8 @@ export const ViewControls = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setDraftFilters({ rules: [] });
-                  setFilters({ rules: [] });
+                  setDraftFilters({ rules: [], actionableOnly: false, viewableOnly: false });
+                  setFilters({ rules: [], actionableOnly: false, viewableOnly: false });
                 }}
                 className="text-xs px-2.5 py-1.5 rounded bg-slate-100 dark:bg-neutral-700 text-slate-700 dark:text-neutral-200 hover:bg-slate-200 dark:hover:bg-neutral-600"
               >

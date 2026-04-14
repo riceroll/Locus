@@ -77,6 +77,8 @@ export interface ViewFilters {
     operator: 'include' | 'exclude';
     values: string[];
   }[];
+  actionableOnly?: boolean;
+  viewableOnly?: boolean;
 }
 
 export interface SavedView {

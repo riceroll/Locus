@@ -117,7 +117,7 @@ const ColumnEndDropZone = ({
 export const KanbanView = () => {
   const { tasks, fetchTasks, addTask, batchUpdatePositions, moveTaskToColumn } = useTaskStore();
   const { getAllEntries, isRunning, activeTaskId, elapsed } = useTimerStore();
-  const { activeFilters } = useViewStore();
+  const { activeFilters, setFilters } = useViewStore();
   const { language } = useSettingsStore();
   const {
     statuses,
@@ -135,8 +135,7 @@ export const KanbanView = () => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [newColumnName, setNewColumnName] = useState('');
   const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
-  const [actionableOnly, setActionableOnly] = useState(false);
-  const [viewableOnly, setViewableOnly] = useState(false);
+
   // columnId → title being typed (null = button visible, '' = input active)
   const [addingInCol, setAddingInCol] = useState<Record<string, string | null>>({});
   const [isAddingColumn, setIsAddingColumn] = useState(false);
@@ -261,7 +260,7 @@ export const KanbanView = () => {
 
     let candidates = filtered;
 
-    if (actionableOnly) {
+    if (activeFilters.actionableOnly) {
       // Actionable: leaf + incomplete
       candidates = candidates.filter((t) => {
         if (parentIds.has(t.id)) return false;
@@ -269,10 +268,10 @@ export const KanbanView = () => {
         return true;
       });
     } else {
-      candidates = candidates.filter((t) => t.parent_id === null);
+      candidates = candidates.filter((t) => t.parent_id === null || doneStatusIds.has(t.status_id));
     }
 
-    if (viewableOnly) {
+    if (activeFilters.viewableOnly) {
       // Only visible tasks
       candidates = candidates.filter((t) => !!t.visible);
     }
@@ -283,7 +282,7 @@ export const KanbanView = () => {
       map[col].push(task);
     }
     return map;
-  }, [filtered, columnIds, columns, actionableOnly, viewableOnly, tasks, statuses]);
+  }, [filtered, columnIds, columns, activeFilters, tasks, statuses]);
 
   const subtaskCounts = useMemo(() => {
     const map: Record<string, { total: number; done: number }> = {};
@@ -408,9 +407,9 @@ export const KanbanView = () => {
         <Tooltip id="actionable">
           <button
             type="button"
-            onClick={() => { setActionableOnly((v) => !v); if (!actionableOnly) setViewableOnly(false); }}
+            onClick={() => setFilters({ ...activeFilters, actionableOnly: !activeFilters.actionableOnly, viewableOnly: false })}
             className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              actionableOnly
+              activeFilters.actionableOnly
                 ? 'bg-amber-100 border-amber-300 text-amber-700'
                 : 'bg-white dark:bg-neutral-800 border-slate-200 dark:border-neutral-700 text-slate-500 dark:text-neutral-400 hover:border-slate-300 dark:hover:border-neutral-600'
             }`}
@@ -422,9 +421,9 @@ export const KanbanView = () => {
         <Tooltip id="viewable">
           <button
             type="button"
-            onClick={() => { setViewableOnly((v) => !v); if (!viewableOnly) setActionableOnly(false); }}
+            onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
             className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              viewableOnly
+              activeFilters.viewableOnly
                 ? 'bg-brand-100 border-brand-300 text-brand-700'
                 : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
             }`}

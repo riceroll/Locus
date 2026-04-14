@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { ChevronLeft, ChevronRight, SortAsc, SortDesc } from 'lucide-react';
+import { ChevronLeft, ChevronRight, SortAsc, SortDesc, Zap, Eye } from 'lucide-react';
+import { Tooltip } from '../../ui/Tooltip';
 import { TaskCard } from './TaskCard';
 import { useTaskStore, type Task } from '../../../store/useTaskStore';
 import { useStatusStore } from '../../../store/useStatusStore';
@@ -72,7 +73,33 @@ export const TaskSidebar = ({ collapsed, onToggleCollapsed, onTaskClick }: Props
   const { views } = useViewStore();
   const { language } = useSettingsStore();
 
+  const [sidebarWidth, setSidebarWidth] = useState(288);
+  const startXRef = useRef(0);
+  const startWRef = useRef(0);
+
+  const startSidebarResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startXRef.current = e.clientX;
+    startWRef.current = sidebarWidth;
+
+    const onMove = (ev: MouseEvent) => {
+      const newW = Math.max(160, Math.min(600, startWRef.current - (ev.clientX - startXRef.current)));
+      setSidebarWidth(newW);
+    };
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove as any);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove as any);
+    document.addEventListener('mouseup', onUp);
+  };
+
   const [sidebarViewId, setSidebarViewId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string>('');
+  const [actionableOnly, setActionableOnly] = useState(false);
+  const [viewableOnly, setViewableOnly] = useState(false);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -88,8 +115,21 @@ export const TaskSidebar = ({ collapsed, onToggleCollapsed, onTaskClick }: Props
     if (!selectedView) {
       list = list.filter((t) => t.parent_id === null);
     }
+
+    if (actionableOnly) {
+      const parentIds = new Set(tasks.filter((t) => t.parent_id).map((t) => t.parent_id!));
+      const doneStatusIds = new Set(statuses.filter((s) => Number(s.is_done)).map((s) => s.id));
+      list = list.filter((t) => !parentIds.has(t.id) && !doneStatusIds.has(t.status_id));
+    }
+    if (viewableOnly) {
+      list = list.filter((t) => !!t.visible);
+    }
+    if (projectId) {
+      list = list.filter((t) => t.project_id === projectId);
+    }
+
     return sortTasks(list, sortField, sortDir);
-  }, [tasks, selectedView, sortField, sortDir, projects]);
+  }, [tasks, selectedView, sortField, sortDir, projects, actionableOnly, viewableOnly, projectId, statuses]);
 
   const statusById = useMemo(() => {
     const m = new Map<string, { name: string; color: string | null }>();
@@ -121,9 +161,20 @@ export const TaskSidebar = ({ collapsed, onToggleCollapsed, onTaskClick }: Props
   }
 
   return (
-    <div className="flex flex-col w-72 shrink-0 bg-white dark:bg-neutral-800 border-l border-neutral-200 dark:border-neutral-700/50 min-h-0">
+    <div 
+      className="relative flex flex-col shrink-0 bg-white dark:bg-neutral-800 border-l border-neutral-200 dark:border-neutral-700/50 min-h-0"
+      style={{ width: `${sidebarWidth}px` }}
+    >
+      {/* Resize handle */}
+      <div 
+        className="absolute left-[-2px] top-0 bottom-0 w-2 cursor-col-resize hover:bg-brand-400/40 active:bg-brand-400/60 transition-colors z-10"
+        onMouseDown={startSidebarResize}
+      />
       {/* Sidebar header */}
-      <div className="shrink-0 px-4 py-3 border-b border-neutral-100 dark:border-neutral-700/50 flex items-center justify-between">
+      <div 
+        className="shrink-0 px-4 py-3 border-b border-neutral-100 dark:border-neutral-700/50 flex items-center justify-between"
+        style={selectedView?.color ? { backgroundColor: `${selectedView.color}20` } : {}}
+      >
         <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">{t(language, 'sidebar_tasks_header')}</span>
         <button
           type="button"
@@ -136,20 +187,21 @@ export const TaskSidebar = ({ collapsed, onToggleCollapsed, onTaskClick }: Props
       </div>
 
       {/* Toolbar: View selector & Sorting */}
-      <div className="shrink-0 px-3 py-2 flex items-center justify-between border-b border-neutral-100 dark:border-neutral-700/50">
-        <select
-          value={sidebarViewId ?? ''}
-          onChange={(e) => setSidebarViewId(e.target.value || null)}
-          className="text-xs font-medium text-neutral-600 dark:text-neutral-300 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-600 px-2 py-1.5 rounded cursor-pointer outline-none appearance-none focus:ring-1 focus:ring-brand-300"
-        >
-          <option value="">{t(language, 'option_all_tasks')}</option>
-          {views.map((v) => (
-            <option key={v.id} value={v.id}>{v.name}</option>
-          ))}
-        </select>
+      <div className="shrink-0 px-3 py-2 flex flex-col gap-2 border-b border-neutral-100 dark:border-neutral-700/50 bg-white dark:bg-neutral-800">
+        <div className="flex items-center justify-between">
+          <select
+            value={sidebarViewId ?? ''}
+            onChange={(e) => setSidebarViewId(e.target.value || null)}
+            className="text-xs font-medium text-neutral-600 dark:text-neutral-300 bg-transparent hover:bg-neutral-100 dark:hover:bg-neutral-600 px-2 py-1.5 rounded cursor-pointer outline-none appearance-none focus:ring-1 focus:ring-brand-300"
+          >
+            <option value="">{t(language, 'option_all_tasks')}</option>
+            {views.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
 
-        <div className="relative group/sort">
-          <button
+          <div className="relative group/sort">
+            <button
             type="button"
             className="p-1.5 rounded text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-100 dark:hover:bg-neutral-600 transition"
           >
@@ -178,6 +230,47 @@ export const TaskSidebar = ({ collapsed, onToggleCollapsed, onTaskClick }: Props
               </button>
             ))}
           </div>
+        </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            className="text-xs border border-slate-200 dark:border-neutral-600 rounded px-1.5 py-1 bg-transparent hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 outline-none max-w-[100px]"
+          >
+            <option value="">{t(language, 'filter_field_project')}</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <Tooltip id="sidebar_actionable">
+            <button
+              type="button"
+              onClick={() => { setActionableOnly(!actionableOnly); if (!actionableOnly) setViewableOnly(false); }}
+              className={`p-1 rounded transition-colors ${
+                actionableOnly
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                  : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+            </button>
+          </Tooltip>
+          <Tooltip id="sidebar_viewable">
+            <button
+              type="button"
+              onClick={() => { setViewableOnly(!viewableOnly); if (!viewableOnly) setActionableOnly(false); }}
+              className={`p-1 rounded transition-colors ${
+                viewableOnly
+                  ? 'bg-brand-100 text-brand-700'
+                  : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

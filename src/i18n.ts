@@ -54,6 +54,8 @@ const en = {
   filter_field_area: 'Area',
   filter_include: 'Include',
   filter_exclude: 'Exclude',
+  filter_actionable_only: 'Actionable only',
+  filter_viewable_only: 'Viewable only',
   btn_apply_filters: 'Apply Filters',
   btn_clear: 'Clear',
   status_manager_title: 'Status Manager',
@@ -92,6 +94,7 @@ const en = {
   tab_emoji: '😊 Emoji',
   tab_icon: '✦ Icon',
   tooltip_remove_icon: 'Remove icon (use color dot)',
+  tooltip_close: 'Close',
   section_icon_color: 'Icon Color',
 
   // Task detail
@@ -261,6 +264,8 @@ const zh: Record<keyof typeof en, string> = {
   filter_field_area: '区域',
   filter_include: '包含',
   filter_exclude: '排除',
+  filter_actionable_only: '仅可操作',
+  filter_viewable_only: '仅可查看',
   btn_apply_filters: '应用筛选',
   btn_clear: '清除',
   status_manager_title: '状态管理',
@@ -296,6 +301,7 @@ const zh: Record<keyof typeof en, string> = {
   tab_emoji: '😊 表情',
   tab_icon: '✦ 图标',
   tooltip_remove_icon: '移除图标（使用颜色圆点）',
+  tooltip_close: '关闭',
   section_icon_color: '图标颜色',
 
   label_status: '状态',

@@ -27,7 +27,7 @@ import { Tooltip } from '../ui/Tooltip';
 export const ListView = () => {
   const { tasks, isLoading, error, fetchTasks, addTask, addNextTask, updateTaskStatus, toggleCollapsed, deleteTask, deleteTaskRecursive, moveTask, batchUpdatePositions } = useTaskStore();
   const { isRunning, activeTaskId, elapsed, getAllEntries, startTimer, stopTimer } = useTimerStore();
-  const { activeFilters } = useViewStore();
+  const { activeFilters, setFilters } = useViewStore();
   const { language } = useSettingsStore();
   const { statuses, fetchStatuses, getDoneStatusId, getDefaultOpenStatusId } = useStatusStore();
   const { projects, fetchProjects } = useProjectStore();
@@ -42,8 +42,7 @@ export const ListView = () => {
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   // Filter modes
-  const [showActionable, setShowActionable] = useState(false);
-  const [showViewable, setShowViewable] = useState(false);
+
 
   // Sort
   type SortField = 'title' | 'status' | 'project' | 'priority' | 'visible' | 'created' | 'updated';
@@ -238,12 +237,12 @@ export const ListView = () => {
 
   // Build tree rows (or flat list when filtering / quick-filter active)
   const renderRows = useMemo(() => {
-    const useFlat = isFiltered || showActionable || showViewable;
+    const useFlat = isFiltered || activeFilters.actionableOnly || activeFilters.viewableOnly;
 
     if (useFlat) {
       let pool = filteredTasks;
 
-      if (showActionable) {
+      if (activeFilters.actionableOnly) {
         // Actionable: leaf + incomplete + visible
         pool = pool.filter((t) => {
           if (parentIds.has(t.id)) return false;
@@ -252,7 +251,7 @@ export const ListView = () => {
         });
       }
 
-      if (showViewable) {
+      if (activeFilters.viewableOnly) {
         // Viewable: only visible tasks
         pool = pool.filter((t) => !!t.visible);
       }
@@ -267,7 +266,7 @@ export const ListView = () => {
     }
 
     return buildRenderList(tasks, doneSet, null, 0);
-  }, [tasks, filteredTasks, isFiltered, doneSet, parentIds, showActionable, showViewable]);
+  }, [tasks, filteredTasks, isFiltered, doneSet, parentIds, activeFilters]);
 
   const PRIORITY_ORDER: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -561,9 +560,9 @@ export const ListView = () => {
         <Tooltip id="actionable">
           <button
             type="button"
-            onClick={() => { setShowActionable((v) => !v); if (!showActionable) setShowViewable(false); }}
+            onClick={() => setFilters({ ...activeFilters, actionableOnly: !activeFilters.actionableOnly, viewableOnly: false })}
             className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              showActionable
+              activeFilters.actionableOnly
                 ? 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400'
                 : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
             }`}
@@ -575,9 +574,9 @@ export const ListView = () => {
         <Tooltip id="viewable">
           <button
             type="button"
-            onClick={() => { setShowViewable((v) => !v); if (!showViewable) setShowActionable(false); }}
+            onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
             className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              showViewable
+              activeFilters.viewableOnly
                 ? 'bg-brand-100 border-brand-300 text-brand-700'
                 : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
             }`}
@@ -846,7 +845,7 @@ export const ListView = () => {
               {sortedRows.length === 0 && !isLoading && (
                 <tr>
                   <td colSpan={COL_COUNT} className="px-6 py-12 text-center text-slate-400 dark:text-neutral-400 text-sm">
-                    {isFiltered || showActionable || showViewable ? t(language, 'no_tasks_filtered') : t(language, 'no_tasks_yet')}
+                    {isFiltered || activeFilters.actionableOnly || activeFilters.viewableOnly ? t(language, 'no_tasks_filtered') : t(language, 'no_tasks_yet')}
                   </td>
                 </tr>
               )}

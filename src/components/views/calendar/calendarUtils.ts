@@ -172,10 +172,13 @@ export function layoutDayEntries(entries: CalendarEntry[]): LayoutEntry[] {
 
   // For each entry, colCount = (max col index among entries that overlap it) + 1
   // This way non-overlapping entries keep full width while overlapping ones share it.
+  const MAX_COLS = 4;
   return assigned.map(({ entry, col }) => {
     const maxCol = assigned
       .filter(({ entry: other }) => other.startTime < entry.endTime && other.endTime > entry.startTime)
       .reduce((max, { col: c }) => Math.max(max, c), 0);
-    return { entry, col, colCount: maxCol + 1 };
+    const finalColCount = Math.min(maxCol + 1, MAX_COLS);
+    const finalCol = Math.min(col, MAX_COLS - 1);
+    return { entry, col: finalCol, colCount: finalColCount };
   });
 }

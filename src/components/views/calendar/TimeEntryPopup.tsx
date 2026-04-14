@@ -114,15 +114,20 @@ export const TimeEntryPopup = ({ entryId, anchorEl, onClose, onOpenTask, onDataC
       <div className="flex items-center gap-2 mb-3">
         <button
           type="button"
-          onClick={() => { if (entry) { onOpenTask(entry.task_id); onClose(); } }}
+          onClick={onClose}
           className="btn-ghost"
-          title={t(language, 'tooltip_open_task')}
+          title={t(language, 'tooltip_close')}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-neutral-200 truncate">
+        <button
+          type="button"
+          onClick={() => { if (entry) { onOpenTask(entry.task_id); onClose(); } }}
+          className="flex-1 text-left text-sm font-semibold text-slate-800 dark:text-neutral-200 truncate hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+          title={t(language, 'tooltip_open_task')}
+        >
           {entry?.title ?? '…'}
-        </span>
+        </button>
       </div>
 
       {/* Duration badge */}

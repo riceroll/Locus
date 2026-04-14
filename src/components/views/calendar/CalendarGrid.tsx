@@ -212,7 +212,7 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
   const handleResizeStart = useCallback((entryId: string, edge: 'top' | 'bottom', e: React.MouseEvent) => {
     e.preventDefault();
     const entry = entries.find((en) => en.id === entryId);
-    if (!entry || entry.isActive) return;
+    if (!entry || (entry.isActive && edge === 'bottom')) return;
     setResize({
       entryId,
       edge,
@@ -242,14 +242,16 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
         }
       }
       const rawStart = drag.origStartTime + deltaMs + dayOffset * 86_400_000;
-      const snapped = snapToMinutes(rawStart, 15);
+      const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
+      const snapped = snapToMinutes(rawStart, snapMin);
       setDrag((prev) => prev ? { ...prev, ghostStartTime: snapped } : null);
     };
 
-    const onUp = async () => {
+    const onUp = async (e: MouseEvent) => {
       if (!drag) return;
       const duration = drag.origEndTime - drag.origStartTime;
-      const newStart = snapToMinutes(drag.ghostStartTime, 15);
+      const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
+      const newStart = snapToMinutes(drag.ghostStartTime, snapMin);
       const newEnd = newStart + duration;
       setDrag(null);
       // Optimistic update
@@ -278,12 +280,14 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
     const onMove = (e: MouseEvent) => {
       const deltaY = e.clientY - resize.startY;
       const deltaMs = (deltaY / hourHeight) * 3_600_000;
+      const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
+      
       if (resize.edge === 'top') {
-        const newStart = snapToMinutes(resize.origStartTime + deltaMs, 15);
+        const newStart = snapToMinutes(resize.origStartTime + deltaMs, snapMin);
         const clamped = Math.min(newStart, resize.origEndTime - MIN_DURATION);
         setResize((prev) => prev ? { ...prev, ghostStartTime: clamped } : null);
       } else {
-        const newEnd = snapToMinutes(resize.origEndTime + deltaMs, 15);
+        const newEnd = snapToMinutes(resize.origEndTime + deltaMs, snapMin);
         const clamped = Math.max(newEnd, resize.origStartTime + MIN_DURATION);
         setResize((prev) => prev ? { ...prev, ghostEndTime: clamped } : null);
       }
@@ -310,12 +314,11 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
   // ── Draw-to-create (mousedown on empty grid background) ──────────────────────
   const handleDrawStart = useCallback((anchorTime: number, day: Date, e: React.MouseEvent) => {
     const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
-    const snapped = snapToMinutes(anchorTime, snapMin);
     setDraw({
-      anchorTime: snapped,
+      anchorTime,
       day,
-      ghostStartTime: snapped,
-      ghostEndTime: snapped + 15 * 60_000,
+      ghostStartTime: anchorTime,
+      ghostEndTime: anchorTime + 15 * 60_000,
       moved: false,
       startClientY: e.clientY,
       snapMin,
@@ -326,33 +329,35 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
     if (!draw) return;
 
     const onMove = (e: MouseEvent) => {
+      const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
       // find the day column under cursor
       const stack = document.elementsFromPoint(e.clientX, e.clientY);
       const dayColEl = stack.find((el) => (el as HTMLElement).dataset?.dayCol) as HTMLElement | null;
       if (!dayColEl) return;
       const rect = dayColEl.getBoundingClientRect();
       const relY = e.clientY - rect.top;
-      const cursorTime = snapToMinutes(pxToTime(relY, draw.day, hourHeight), draw.snapMin);
+      const cursorTime = snapToMinutes(pxToTime(relY, draw.day, hourHeight), snapMin);
+      const moved = Math.abs(e.clientY - draw.startClientY) > 4;
+      const startAnchor = moved ? snapToMinutes(draw.anchorTime, snapMin) : draw.anchorTime;
       const ghost = {
-        ghostStartTime: Math.min(draw.anchorTime, cursorTime),
-        ghostEndTime: Math.max(draw.anchorTime, cursorTime) || draw.anchorTime + 15 * 60_000,
+        ghostStartTime: Math.min(startAnchor, cursorTime),
+        ghostEndTime: Math.max(startAnchor, cursorTime) || startAnchor + 15 * 60_000,
       };
       // Enforce minimum 1-minute height
       if (ghost.ghostEndTime <= ghost.ghostStartTime) ghost.ghostEndTime = ghost.ghostStartTime + 60_000;
-      const moved = Math.abs(e.clientY - draw.startClientY) > 4;
-      setDraw((prev) => prev ? { ...prev, ...ghost, moved } : null);
+      setDraw((prev) => prev ? { ...prev, ...ghost, moved, snapMin } : null);
     };
 
     const onUp = (e: MouseEvent) => {
       if (!draw) return;
-      const { ghostStartTime, ghostEndTime, moved, anchorTime, day, snapMin } = draw;
+      const { ghostStartTime, ghostEndTime, moved, anchorTime, day } = draw;
       setDraw(null);
 
       let finalStart: number;
       let finalEnd: number;
       if (!moved) {
-        // Treat as click → 15-min entry
-        finalStart = snapToMinutes(anchorTime, snapMin);
+        // Treat as click → exactly click time entry
+        finalStart = anchorTime;
         finalEnd = finalStart + 15 * 60_000;
       } else {
         finalStart = ghostStartTime;

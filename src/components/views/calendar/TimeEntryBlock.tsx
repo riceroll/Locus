@@ -63,26 +63,26 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
       onMouseDown={(e) => {
         clickStartRef.current = { x: e.clientX, y: e.clientY };
         if (e.button !== 0 || !onDragStart) return;
-        // Only start drag from the middle zone (not top/bottom 5 px which are resize handles)
+        // Only start drag from the middle zone (not top/bottom 3 px which are resize handles)
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const relY = e.clientY - rect.top;
-        if (relY < 5 || relY > rect.height - 5) return;
+        if (relY < 3 || relY > rect.height - 3) return;
         e.stopPropagation();
         onDragStart(entry.id, e);
       }}
     >
-      {/* Top resize handle — tight 5px zone */}
+      {/* Top resize handle — tight 3px zone */}
       {onResizeStart && (
         <div
-          className="absolute top-0 left-0 right-0 h-[5px] cursor-ns-resize z-10"
+          className="absolute top-[-1px] left-0 right-0 h-[4px] cursor-ns-resize z-10"
           onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); onResizeStart(entry.id, 'top', e); }}
           onClick={(e) => e.stopPropagation()}
         />
       )}
-      {/* Bottom resize handle — tight 5px zone */}
-      {onResizeStart && (
+      {/* Bottom resize handle — tight 3px zone */}
+      {onResizeStart && !entry.isActive && (
         <div
-          className="absolute bottom-0 left-0 right-0 h-[5px] cursor-ns-resize z-10"
+          className="absolute bottom-[-1px] left-0 right-0 h-[4px] cursor-ns-resize z-10"
           onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); onResizeStart(entry.id, 'bottom', e); }}
           onClick={(e) => e.stopPropagation()}
         />
