@@ -100,13 +100,14 @@ export const SortableTaskCard = ({
         {...attributes}
         {...listeners}
         style={style}
-        className="card card-hover cursor-grab active:cursor-grabbing touch-none"
+        className="group card card-hover cursor-grab active:cursor-grabbing touch-none"
       >
         <div className="flex items-center gap-2 p-3">
           {/* Checkbox */}
           <button
             type="button"
             className={`task-checkbox ${isDone ? 'task-checkbox-on' : 'task-checkbox-off'}`}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={async (e) => {
               e.stopPropagation();
               if (!doneStatus) return;
@@ -127,6 +128,7 @@ export const SortableTaskCard = ({
             <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
               <button
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); onOpenDetail?.(task.id); }}
                 className={`text-sm font-medium text-left hover:text-brand-600 hover:underline transition ${
                   isDone ? 'line-through text-slate-400 dark:text-neutral-500' : isHidden ? 'text-slate-400 dark:text-neutral-500' : 'text-slate-800 dark:text-neutral-200'
@@ -137,6 +139,7 @@ export const SortableTaskCard = ({
               {parentTask && (
                 <button
                   type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: parentTask.id } }));
@@ -189,7 +192,10 @@ export const SortableTaskCard = ({
           {/* Visibility toggle */}
           <button
             type="button"
-            className={`shrink-0 p-1 rounded transition ${
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            className={`shrink-0 p-1 rounded transition-colors ${
               isHidden
                 ? 'text-slate-300 dark:text-neutral-600 hover:text-slate-500 dark:hover:text-neutral-400'
                 : 'text-slate-400 dark:text-neutral-500 hover:text-brand-500 opacity-0 group-hover:opacity-100'
@@ -203,7 +209,10 @@ export const SortableTaskCard = ({
           {/* Play/Stop */}
           <button
             type="button"
-            className={`shrink-0 btn-icon ${
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            className={`shrink-0 btn-icon min-w-[28px] min-h-[28px] flex items-center justify-center ${
               isActive
                 ? 'bg-red-50 dark:bg-red-900/30 text-red-500'
                 : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30'
@@ -211,7 +220,7 @@ export const SortableTaskCard = ({
             title={isActive ? 'Stop timer' : 'Start timer'}
             onClick={(e) => { e.stopPropagation(); isActive ? stopTimer() : startTimer(task.id, task.title); }}
           >
-            {isActive ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5" />}
+            {isActive ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
           </button>
         </div>
       </div>

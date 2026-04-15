@@ -70,6 +70,7 @@ export const TaskCard = ({
       {/* Checkbox */}
       <button
         type="button"
+        onPointerDown={(e) => e.stopPropagation()}
         className={`task-checkbox ${isDone ? 'task-checkbox-on' : 'task-checkbox-off'}`}
         onClick={async (e) => {
           e.stopPropagation();
@@ -122,6 +123,7 @@ export const TaskCard = ({
       {/* Play/Stop — round icon-only button on right */}
       <button
         type="button"
+        onPointerDown={(e) => e.stopPropagation()}
         className={`shrink-0 btn-icon ${running ? 'bg-red-50 text-red-500' : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 hover:text-brand-600 hover:bg-brand-50'}`}
         title={running ? t(language, 'tooltip_stop_timer') : t(language, 'tooltip_start_timer')}
         onClick={async (e) => {
@@ -133,7 +135,7 @@ export const TaskCard = ({
           }
         }}
       >
-        {running ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+        {running ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3 ml-0.5 mt-px" />}
       </button>
     </div>
   );

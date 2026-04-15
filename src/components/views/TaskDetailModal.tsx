@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plus, ChevronRight, ChevronDown, Clock, ExternalLink, Trash2, Calendar, Play, Square, Eye, EyeOff, Check, GripVertical } from 'lucide-react';
+import { X, Plus, ChevronRight, ChevronDown, Clock, ExternalLink, Trash2, Calendar, Play, Square, Eye, EyeOff, Check } from 'lucide-react';
 import {
   DndContext,
   PointerSensor,
@@ -48,7 +48,7 @@ const SortableSubtaskCard = ({
   onToggleVisible: (id: string) => void;
 }) => {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: sub.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
+  const style = { transform: CSS.Transform.toString(transform), transition: isDragging ? 'none' : transition, opacity: isDragging ? 0.4 : 1, zIndex: isDragging ? 999 : 'auto' };
 
   const subStatus = statuses.find((s) => s.id === sub.status_id);
   const isDone = subStatus && Number(subStatus.is_done);
@@ -58,24 +58,17 @@ const SortableSubtaskCard = ({
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={`rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-sm group transition ${subHidden ? 'opacity-60' : ''}`}
+      style={style as any}
+      {...attributes}
+      {...listeners}
+      className={`rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-sm group transition-shadow cursor-grab active:cursor-grabbing touch-none ${subHidden ? 'opacity-60' : ''}`}
     >
-      <div className="flex items-center gap-2 px-2 pt-2.5 pb-1.5">
-        {/* Drag handle */}
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="shrink-0 p-0.5 text-neutral-300 dark:text-neutral-600 hover:text-neutral-500 dark:hover:text-neutral-400 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition touch-none"
-          tabIndex={-1}
-        >
-          <GripVertical className="w-3.5 h-3.5" />
-        </button>
+      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
 
         {/* Checkbox */}
         <button
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onToggleDone(sub)}
           className={`shrink-0 w-4 h-4 rounded border-2 flex items-center justify-center transition ${
             isDone ? 'bg-brand-500 border-brand-500 text-white' : 'border-neutral-300 dark:border-neutral-500 hover:border-brand-400'
@@ -85,19 +78,23 @@ const SortableSubtaskCard = ({
         </button>
 
         {/* Title */}
-        <button
-          type="button"
-          onClick={() => onOpenSub(sub.id)}
-          className={`flex-1 text-sm text-left leading-snug hover:text-brand-600 dark:hover:text-brand-400 transition ${
-            isDone ? 'line-through text-neutral-400 dark:text-neutral-500' : subHidden ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-800 dark:text-neutral-200'
-          }`}
-        >
-          {sub.title}
-        </button>
+        <div className="flex-1 min-w-0 pr-2 flex items-center">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => onOpenSub(sub.id)}
+            className={`text-sm text-left leading-snug truncate max-w-full hover:text-brand-600 dark:hover:text-brand-400 transition cursor-pointer ${
+              isDone ? 'line-through text-neutral-400 dark:text-neutral-500' : subHidden ? 'text-neutral-400 dark:text-neutral-500' : 'text-neutral-800 dark:text-neutral-200'
+            }`}
+          >
+            {sub.title}
+          </button>
+        </div>
 
         {/* Visibility toggle */}
         <button
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onToggleVisible(sub.id)}
           className={`shrink-0 p-0.5 rounded transition ${
             subHidden ? 'text-neutral-300 dark:text-neutral-600' : 'opacity-0 group-hover:opacity-100 text-neutral-400 dark:text-neutral-500 hover:text-brand-500'
@@ -110,8 +107,9 @@ const SortableSubtaskCard = ({
         {/* Open detail */}
         <button
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onOpenSub(sub.id)}
-          className="opacity-0 group-hover:opacity-100 text-neutral-400 dark:text-neutral-500 hover:text-brand-500 transition shrink-0"
+          className="opacity-0 group-hover:opacity-100 text-neutral-400 dark:text-neutral-500 hover:text-brand-500 transition shrink-0 cursor-pointer"
           title={t(language, 'tooltip_open_subtask')}
         >
           <ExternalLink className="w-3.5 h-3.5" />
@@ -119,14 +117,14 @@ const SortableSubtaskCard = ({
       </div>
 
       {/* Status + priority row */}
-      <div className="flex items-center gap-2 px-9 pb-2.5">
+      <div className="flex items-center gap-2 px-9 pb-2.5" onPointerDown={(e) => e.stopPropagation()}>
         <PillSelect
           value={sub.status_id}
           options={statuses.map((s) => ({ value: s.id, label: s.name, color: s.color || '#94a3b8' }))}
           onChange={async (val) => { if (val) await useTaskStore.getState().updateTask(sub.id, { status_id: val }); }}
         />
         {subPriority && (
-          <span className="text-[11px] font-bold ml-auto" style={{ color: subPriority.color }}>!</span>
+          <span className="text-[11px] font-bold ml-auto pointer-events-none" style={{ color: subPriority.color }}>!</span>
         )}
       </div>
     </div>

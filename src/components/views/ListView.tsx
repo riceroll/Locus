@@ -553,9 +553,9 @@ export const ListView = () => {
   ];
 
   return (
-    <div className="bg-slate-50 dark:bg-neutral-950 min-h-screen flex flex-col">
+    <div className="bg-slate-50 dark:bg-neutral-950 h-full flex flex-col overflow-hidden">
       {/* Toolbar: quick filters + controls */}
-      <div className="px-6 py-2 border-b-2 border-neutral-200 dark:border-neutral-600 flex items-center gap-2 flex-wrap bg-white dark:bg-neutral-900">
+      <div className="px-6 py-2 shrink-0 border-b-2 border-neutral-200 dark:border-neutral-600 flex items-center gap-2 flex-wrap bg-white dark:bg-neutral-900">
         {/* Quick filter buttons */}
         <Tooltip id="actionable">
           <button
@@ -674,10 +674,11 @@ export const ListView = () => {
         </div>
       </div>
 
-      {isLoading && <p className="text-slate-500 dark:text-neutral-300 text-sm">{t(language, 'text_loading')}</p>}
-      {error && <p className="text-red-500 text-sm">Error: {error}</p>}
+      <div className="flex-1 overflow-auto min-h-0 bg-white dark:bg-neutral-950">
+        {isLoading && <p className="text-slate-500 dark:text-neutral-300 text-sm p-4">{t(language, 'text_loading')}</p>}
+        {error && <p className="text-red-500 text-sm p-4">Error: {error}</p>}
 
-      {/* Table */}
+        {/* Table */}
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -880,6 +881,7 @@ export const ListView = () => {
           })()}
         </DragOverlay>
       </DndContext>
+      </div>
 
       {deleteDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-[2px] px-4">

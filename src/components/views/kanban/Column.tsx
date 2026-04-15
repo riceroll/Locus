@@ -200,6 +200,7 @@ export const Column = ({
         ) : (
           <button
             type="button"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setIsEditing(true)}
             className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-neutral-100 text-left truncate flex-1"
             title={t(language, 'tooltip_click_to_rename')}
@@ -212,6 +213,7 @@ export const Column = ({
         <span className="ml-auto text-xs text-neutral-400 dark:text-neutral-500 shrink-0">{tasks.length}</span>
         <button
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onToggleCollapse?.(id);
@@ -224,6 +226,7 @@ export const Column = ({
         <button
           ref={menuButtonRef}
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onToggleMenu(id)}
           className="p-0.5 rounded text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 shrink-0 transition opacity-0 group-hover:opacity-100"
         >
@@ -291,7 +294,7 @@ export const Column = ({
       {/* Body */}
       <div
         ref={setNodeRef}
-        className={`flex-1 rounded-lg border p-2 pt-2 min-h-[120px] transition-colors flex flex-col gap-2 ${
+        className={`flex-1 overflow-y-auto min-h-0 rounded-lg border p-2 pt-2 transition-colors flex flex-col gap-2 ${
           isOver ? 'bg-brand-50/30 border-brand-200 dark:border-brand-700/50' : 'border-transparent'
         }`}
       >

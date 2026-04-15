@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Circle, Filter, Plus, Save, Trash2 } from 'lucide-react';
+import { Filter, Plus, Save, Trash2 } from 'lucide-react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useStatusStore } from '../../store/useStatusStore';
 import { useAreaStore } from '../../store/useAreaStore';
@@ -18,7 +18,7 @@ const emptyRule = () => ({
 
 export const ViewControls = () => {
   const { activeFilters, activeViewId, setFilters, createView, updateView, activeViewType } = useViewStore();
-  const { statuses, fetchStatuses, addStatus, renameStatus, removeStatus, setDoneStatus } = useStatusStore();
+  const { statuses, fetchStatuses } = useStatusStore();
   const { projects, fetchProjects } = useProjectStore();
   const { areas, fetchAreas } = useAreaStore();
   const { language } = useSettingsStore();
@@ -29,7 +29,6 @@ export const ViewControls = () => {
     actionableOnly: activeFilters.actionableOnly ?? false,
     viewableOnly: activeFilters.viewableOnly ?? false,
   });
-  const [newStatusName, setNewStatusName] = useState('');
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [saveName, setSaveName] = useState('');
   const panelRef = useRef<HTMLDivElement>(null);
@@ -203,25 +202,37 @@ export const ViewControls = () => {
               {draftFilters.rules.map((rule, idx) => {
                 const options = getOptions(rule.field);
                 return (
-                  <div key={idx} className="border border-slate-200 dark:border-neutral-700 rounded p-2 space-y-2 bg-slate-50/40 dark:bg-neutral-700/50">
+                  <div key={idx} className="border border-slate-200 dark:border-neutral-700 rounded-lg p-3 space-y-3 bg-slate-50/40 dark:bg-neutral-800/50">
                     <div className="flex items-center gap-2">
-                      <select
-                        value={rule.field}
-                        onChange={(e) => updateRule(idx, { field: e.target.value as RuleField, values: [] })}
-                        className="text-xs border border-slate-300 dark:border-neutral-600 rounded px-2 py-1 dark:bg-neutral-700 dark:text-neutral-200"
+                      <div className="flex bg-slate-100/80 dark:bg-neutral-900/80 p-0.5 rounded-md border border-slate-200/50 dark:border-neutral-800">
+                        {(['status_id', 'project_id', 'area_id'] as RuleField[]).map(field => (
+                          <button
+                            key={field}
+                            type="button"
+                            onClick={() => updateRule(idx, { field, values: [] })}
+                            className={`text-[11px] px-2 py-1 rounded transition-all ${
+                              rule.field === field
+                                ? 'bg-white dark:bg-neutral-700 text-slate-800 dark:text-neutral-100 shadow-[0_1px_2px_rgba(0,0,0,0.05)] font-medium'
+                                : 'text-slate-500 dark:text-neutral-400 hover:text-slate-700 dark:hover:text-neutral-300'
+                            }`}
+                          >
+                            {field === 'status_id' ? t(language, 'filter_field_status') : field === 'project_id' ? t(language, 'filter_field_project') : t(language, 'filter_field_area')}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => updateRule(idx, { operator: rule.operator === 'include' ? 'exclude' : 'include' })}
+                        className={`text-[11px] px-2 py-1 rounded-md font-medium border transition-colors ${
+                          rule.operator === 'include' 
+                            ? 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800/50 dark:text-blue-400'
+                            : 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800/50 dark:text-orange-400'
+                        }`}
                       >
-                        <option value="status_id">{t(language, 'filter_field_status')}</option>
-                        <option value="project_id">{t(language, 'filter_field_project')}</option>
-                        <option value="area_id">{t(language, 'filter_field_area')}</option>
-                      </select>
-                      <select
-                        value={rule.operator}
-                        onChange={(e) => updateRule(idx, { operator: e.target.value as RuleOperator })}
-                        className="text-xs border border-slate-300 dark:border-neutral-600 rounded px-2 py-1 dark:bg-neutral-700 dark:text-neutral-200"
-                      >
-                        <option value="include">{t(language, 'filter_include')}</option>
-                        <option value="exclude">{t(language, 'filter_exclude')}</option>
-                      </select>
+                        {rule.operator === 'include' ? t(language, 'filter_include') : t(language, 'filter_exclude')}
+                      </button>
+
                       <button
                         type="button"
                         onClick={() =>
@@ -229,48 +240,64 @@ export const ViewControls = () => {
                             rules: draftFilters.rules.filter((_, i) => i !== idx),
                           })
                         }
-                        className="ml-auto text-slate-400 dark:text-neutral-500 hover:text-red-600"
+                        className="ml-auto p-1 rounded-md text-slate-400 dark:text-neutral-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      {options.map((opt) => (
-                        <label key={opt.value} className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-neutral-200">
-                          <input
-                            type="checkbox"
-                            checked={rule.values.includes(opt.value)}
-                            onChange={() => toggleValue(idx, opt.value)}
-                            className="w-3.5 h-3.5"
-                          />
-                          <span className="truncate">{opt.label}</span>
-                        </label>
-                      ))}
+                    
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {options.length === 0 && (
+                        <span className="text-xs text-slate-400 dark:text-neutral-500 italic pb-1">
+                          No items available.
+                        </span>
+                      )}
+                      {options.map((opt) => {
+                        const isSelected = rule.values.includes(opt.value);
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => toggleValue(idx, opt.value)}
+                            className={`text-[11px] px-2.5 py-1 rounded-full transition-all border ${
+                              isSelected
+                                ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700/50 dark:text-brand-300 font-medium'
+                                : 'bg-white border-slate-200 text-slate-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400 hover:border-slate-300 dark:hover:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-700/50'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="mt-4 space-y-2 border-t border-slate-200 dark:border-neutral-700 pt-3">
-              <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-neutral-200">
-                <input
-                  type="checkbox"
-                  checked={draftFilters.actionableOnly ?? false}
-                  onChange={(e) => setDraftFilters({ ...draftFilters, actionableOnly: e.target.checked })}
-                  className="w-3.5 h-3.5"
-                />
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 dark:border-neutral-700 pt-3">
+              <button
+                type="button"
+                onClick={() => setDraftFilters({ ...draftFilters, actionableOnly: !draftFilters.actionableOnly })}
+                className={`text-xs px-3 py-1.5 rounded-full transition-all border ${
+                  draftFilters.actionableOnly
+                    ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700/50 dark:text-brand-300 font-medium'
+                    : 'bg-white border-slate-200 text-slate-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400 hover:border-slate-300 dark:hover:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-700/50'
+                }`}
+              >
                 {t(language, 'filter_actionable_only')}
-              </label>
-              <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-neutral-200">
-                <input
-                  type="checkbox"
-                  checked={draftFilters.viewableOnly ?? false}
-                  onChange={(e) => setDraftFilters({ ...draftFilters, viewableOnly: e.target.checked })}
-                  className="w-3.5 h-3.5"
-                />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDraftFilters({ ...draftFilters, viewableOnly: !draftFilters.viewableOnly })}
+                className={`text-xs px-3 py-1.5 rounded-full transition-all border ${
+                  draftFilters.viewableOnly
+                    ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700/50 dark:text-brand-300 font-medium'
+                    : 'bg-white border-slate-200 text-slate-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400 hover:border-slate-300 dark:hover:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-700/50'
+                }`}
+              >
                 {t(language, 'filter_viewable_only')}
-              </label>
+              </button>
             </div>
 
             <div className="mt-3 flex gap-2">
@@ -290,67 +317,6 @@ export const ViewControls = () => {
                 className="text-xs px-2.5 py-1.5 rounded bg-slate-100 dark:bg-neutral-700 text-slate-700 dark:text-neutral-200 hover:bg-slate-200 dark:hover:bg-neutral-600"
               >
                 {t(language, 'btn_clear')}
-              </button>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-200 dark:border-neutral-700 pt-3">
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-neutral-200 mb-2">{t(language, 'status_manager_title')}</h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-              {statuses.map((s) => (
-                <div key={s.id} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    defaultValue={s.name}
-                    onBlur={async (e) => {
-                      const newName = e.target.value.trim();
-                      if (!newName || newName === s.name) return;
-                      await renameStatus(s.id, newName);
-                    }}
-                    className="text-xs border border-slate-300 dark:border-neutral-600 rounded px-2 py-1 flex-1 dark:bg-neutral-700 dark:text-neutral-200"
-                  />
-                  {s.is_done ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setDoneStatus(s.id)}
-                      title={t(language, 'tooltip_set_done_status')}
-                      className="text-slate-300 dark:text-neutral-600 hover:text-green-500 flex-shrink-0"
-                    >
-                      <Circle className="w-4 h-4" />
-                    </button>
-                  )}
-                  {!s.is_done && (
-                    <button
-                      type="button"
-                      onClick={async () => removeStatus(s.id)}
-                      className="text-slate-400 dark:text-neutral-500 hover:text-red-600"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <input
-                type="text"
-                value={newStatusName}
-                onChange={(e) => setNewStatusName(e.target.value)}
-                placeholder={t(language, 'placeholder_new_status')}
-                className="text-xs border border-slate-300 dark:border-neutral-600 rounded px-2 py-1 flex-1 dark:bg-neutral-700 dark:text-neutral-200"
-              />
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!newStatusName.trim()) return;
-                  await addStatus(newStatusName.trim());
-                  setNewStatusName('');
-                }}
-                className="text-xs px-2.5 py-1 rounded bg-slate-100 dark:bg-neutral-700 text-slate-700 dark:text-neutral-200 hover:bg-slate-200 dark:hover:bg-neutral-600"
-              >
-                {t(language, 'add')}
               </button>
             </div>
           </div>

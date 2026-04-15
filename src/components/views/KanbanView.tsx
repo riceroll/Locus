@@ -401,9 +401,9 @@ export const KanbanView = () => {
   };
 
   return (
-    <div className="bg-slate-50 dark:bg-neutral-900 h-[calc(100vh-90px)] overflow-hidden flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-neutral-900">
       {/* Toolbar */}
-      <div className="px-4 py-2 border-b-2 border-neutral-200 dark:border-neutral-700 flex items-center gap-2 flex-wrap bg-white dark:bg-neutral-800">
+      <div className="shrink-0 px-4 py-2 border-b-2 border-neutral-200 dark:border-neutral-700 flex items-center gap-2 flex-wrap bg-white dark:bg-neutral-800">
         <Tooltip id="actionable">
           <button
             type="button"

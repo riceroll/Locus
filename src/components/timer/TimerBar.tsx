@@ -5,7 +5,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useStatusStore } from '../../store/useStatusStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { t } from '../../i18n';
-import { Square } from 'lucide-react';
+import { Square, Search, Briefcase, Plus } from 'lucide-react';
 
 // Score a task for suggestion ranking given a query string
 function scoreTask(task: { title: string; updated_at: number; status_id: string }, query: string, doneStatusIds: Set<string>): number {
@@ -128,38 +128,27 @@ export const TimerBar = () => {
   return (
     <div
       data-tauri-drag-region
-      className="group/timerbar sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-white dark:bg-neutral-800 border-2 border-neutral-200 dark:border-neutral-700 transition-all duration-200 relative"
+      className={`group/timerbar sticky top-0 z-50 flex items-center justify-between px-5 py-3 transition-colors duration-400 relative border-b ${
+        isRunning
+          ? 'bg-brand-50/70 dark:bg-brand-950/30 border-brand-200/50 dark:border-brand-800/40 backdrop-blur-xl'
+          : 'bg-white/80 dark:bg-neutral-900/80 border-slate-200 dark:border-neutral-800 backdrop-blur-xl'
+      }`}
     >
-      {/* ── Fancy 4-edge inset gradient border ─────────────────────────── */}
-      {/* Inner box-shadow glow on all sides */}
-      <div
-        className={`pointer-events-none absolute inset-0 z-10 transition-opacity duration-300 ${
-          isRunning ? 'opacity-100' : 'opacity-0 group-hover/timerbar:opacity-100'
-        }`}
-        style={{
-          boxShadow: [
-            'inset 0  3px  8px -4px rgb(var(--brand-500)/0.10)',
-            'inset 4px 0 12px -6px rgb(var(--brand-500)/0.14)',
-            'inset -4px 0 12px -6px rgb(var(--brand-500)/0.14)',
-          ].join(', ')
-        }}
-      />
-      {/* Top gradient line */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-px z-10 opacity-0 group-hover/timerbar:opacity-100 transition-opacity duration-300"
-        style={{ background: 'linear-gradient(90deg, transparent 5%, rgb(var(--brand-400)/0.3) 30%, rgb(var(--brand-300)/0.45) 50%, rgb(var(--brand-400)/0.3) 70%, transparent 95%)' }}
-      />
-      {/* Left gradient line */}
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-px z-10 opacity-0 group-hover/timerbar:opacity-100 transition-opacity duration-300"
-        style={{ background: 'linear-gradient(180deg, transparent 0%, rgb(var(--brand-400)/0.38) 50%, transparent 100%)' }}
-      />
-      {/* Right gradient line */}
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 w-px z-10 opacity-0 group-hover/timerbar:opacity-100 transition-opacity duration-300"
-        style={{ background: 'linear-gradient(180deg, transparent 0%, rgb(var(--brand-400)/0.38) 50%, transparent 100%)' }}
-      />
-      <div className="relative flex items-center gap-3 min-w-0 flex-1">
+      {/* Active Top Glow Line */}
+      {isRunning && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-brand-500/70 to-transparent opacity-80" />
+      )}
+
+      <div className="relative flex items-center gap-3.5 min-w-0 flex-1">
+        {isRunning ? (
+          <div className="relative flex items-center justify-center w-3.5 h-3.5 shrink-0 ml-1">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-60 animate-ping" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500" />
+          </div>
+        ) : (
+          <Search className="w-4 h-4 text-neutral-400 shrink-0 ml-1" />
+        )}
+
         {isRunning && activeTask ? (
           <input
             value={draftTitle}
@@ -169,7 +158,7 @@ export const TimerBar = () => {
               if (e.key === 'Enter') void commitTitle();
               if (e.key === 'Escape') setDraftTitle(activeTaskTitle ?? '');
             }}
-            className="text-sm font-semibold text-brand-600 dark:text-brand-400 bg-transparent focus:outline-none min-w-0 flex-1"
+            className="text-[15px] font-medium text-brand-800 dark:text-brand-200 bg-transparent py-0.5 focus:outline-none min-w-0 flex-1 placeholder:text-brand-600/40 dark:placeholder:text-brand-400/40"
             placeholder={t(language, 'placeholder_task_name')}
           />
         ) : (
@@ -180,13 +169,13 @@ export const TimerBar = () => {
               onChange={(e) => { setQuery(e.target.value); setShowDropdown(true); }}
               onFocus={() => setShowDropdown(true)}
               onKeyDown={handleIdleKeyDown}
-              className="text-sm text-neutral-500 dark:text-neutral-400 font-medium bg-transparent focus:outline-none min-w-0 flex-1 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
+              className="text-[15px] text-neutral-600 dark:text-neutral-300 font-medium bg-transparent py-0.5 focus:outline-none min-w-0 flex-1 placeholder:text-neutral-400 dark:placeholder:text-neutral-500"
               placeholder={t(language, 'timer_idle_placeholder')}
             />
-            {showDropdown && suggestions.length > 0 && (
+            {showDropdown && (suggestions.length > 0 || query.trim()) && (
               <div
                 ref={dropdownRef}
-                className="absolute left-0 top-full mt-1 min-w-[320px] max-w-[480px] bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-lg overflow-hidden z-[9999]"
+                className="absolute left-0 top-full mt-3 w-full max-w-[560px] bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-xl shadow-[0_12px_40px_-12px_rgba(0,0,0,0.15)] dark:shadow-black/50 overflow-hidden z-[9999] flex flex-col origin-top animate-in fade-in slide-in-from-top-2 duration-200"
               >
                 {query.trim() && (
                   <button
@@ -197,63 +186,74 @@ export const TimerBar = () => {
                       if (newId) await startTimer(newId, query.trim());
                       setQuery(''); setShowDropdown(false);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-700 border-b border-neutral-100 dark:border-neutral-700/50"
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 border-b border-black/5 dark:border-white/5 transition-colors group/new"
                   >
-                    <span className="text-brand-500 font-semibold text-xs">{t(language, 'timer_new_task_prefix')}</span>
-                    <span className="truncate text-neutral-700 dark:text-neutral-200 font-medium">{query.trim()}</span>
+                    <div className="flex items-center justify-center w-6 h-6 rounded-md bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400">
+                      <Plus className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-brand-600 dark:text-brand-400 font-medium whitespace-nowrap">{t(language, 'timer_new_task_prefix')}</span>
+                    <span className="truncate text-neutral-800 dark:text-neutral-200 font-medium">{query.trim()}</span>
                   </button>
                 )}
-                {suggestions.map((task, idx) => {
-                  const proj = projects.find((p) => p.id === task.project_id);
-                  const color = proj?.color || '#94a3b8';
-                  const isHighlighted = idx === highlightIdx;
-                  return (
-                    <button
-                      key={task.id}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => selectTask(task)}
-                      onMouseEnter={() => setHighlightIdx(idx)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition ${
-                        isHighlighted ? 'bg-brand-50 dark:bg-brand-900/20' : 'hover:bg-neutral-50 dark:hover:bg-neutral-700'
-                      }`}
-                    >
-                      <span className="truncate flex-1 text-neutral-800 dark:text-neutral-100">{task.title}</span>
-                      {proj && (
-                        <span
-                          className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
-                          style={{ backgroundColor: color + '22', color }}
-                        >
-                          <span className="w-1 h-1 rounded-full" style={{ background: color }} />
-                          {proj.name}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                <div className="py-1">
+                  {suggestions.map((task, idx) => {
+                    const proj = projects.find((p) => p.id === task.project_id);
+                    const color = proj?.color || '#94a3b8';
+                    const isHighlighted = idx === highlightIdx;
+                    return (
+                      <button
+                        key={task.id}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectTask(task)}
+                        onMouseEnter={() => setHighlightIdx(idx)}
+                        className={`w-full flex items-center gap-3 px-3.5 py-2 text-sm text-left transition-colors ${
+                          isHighlighted ? 'bg-black/5 dark:bg-white/5' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 shrink-0">
+                          <Square className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="truncate flex-1 text-neutral-700 dark:text-neutral-200 font-medium">{task.title}</span>
+                        {proj && (
+                          <span
+                            className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium tracking-wide"
+                            style={{ backgroundColor: color + '15', color }}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                            {proj.name}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </>
         )}
       </div>
 
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-5 shrink-0 px-2">
         {isRunning && activeTask && (
-          <div className="relative inline-flex shrink-0">
+          <div className="relative inline-flex shrink-0 group/project">
             {activeTask.project_id ? (() => {
               const proj = projects.find((p) => p.id === activeTask.project_id);
               const color = proj?.color || '#94a3b8';
               return (
                 <span
-                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium cursor-pointer"
-                  style={{ backgroundColor: color + '22', color }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-transform hover:scale-105"
+                  style={{ backgroundColor: color + '1A', color }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+                  <Briefcase className="w-3.5 h-3.5" style={{ color }} />
                   {proj?.name ?? '—'}
                 </span>
               );
             })() : (
-              <span className="text-xs text-neutral-400 dark:text-neutral-500 cursor-pointer px-2 py-0.5">{t(language, 'no_project')}</span>
+              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 cursor-pointer px-2.5 py-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+                <Briefcase className="w-3.5 h-3.5" />
+                {t(language, 'no_project')}
+              </span>
             )}
             <select
               value={activeTask.project_id || ''}
@@ -265,17 +265,23 @@ export const TimerBar = () => {
             </select>
           </div>
         )}
-        <span className={`font-mono text-sm font-semibold tabular-nums ${isRunning ? 'text-neutral-700 dark:text-neutral-200' : 'text-transparent'}`}>
-          {isRunning ? formatDuration(elapsed) : '00:00:00'}
-        </span>
-        <button
-          onClick={stopTimer}
-          className={`flex items-center justify-center w-6 h-6 rounded transition ${isRunning ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-600 cursor-default'}`}
-          title={t(language, isRunning ? 'tooltip_stop_timer' : 'tooltip_start_timer')}
-          disabled={!isRunning}
-        >
-          <Square className="w-3 h-3 fill-current" />
-        </button>
+        <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 rounded-lg pr-1 pl-3 shadow-inner shadow-black/5 dark:shadow-white/5 border border-black/5 dark:border-white/5">
+          <span className={`font-mono text-[14px] leading-none font-bold tabular-nums tracking-wide ${isRunning ? 'text-brand-700 dark:text-brand-300' : 'text-transparent'}`}>
+            {isRunning ? formatDuration(elapsed) : '00:00:00'}
+          </span>
+          <button
+            onClick={stopTimer}
+            className={`flex items-center justify-center w-7 h-7 rounded-md transition-all ${
+              isRunning
+                ? 'bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 shadow-sm'
+                : 'bg-transparent text-neutral-300 dark:text-neutral-700 cursor-default opacity-0'
+            }`}
+            title={t(language, isRunning ? 'tooltip_stop_timer' : 'tooltip_start_timer')}
+            disabled={!isRunning}
+          >
+            <Square className="w-3.5 h-3.5 fill-current" />
+          </button>
+        </div>
       </div>
     </div>
   );
