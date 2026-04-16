@@ -23,6 +23,8 @@ interface DragState {
   entryId: string;
   /** pointer Y at drag start */
   startY: number;
+  /** pointer X at drag start */
+  startX: number;
   /** original entry startTime */
   origStartTime: number;
   /** original entry endTime */
@@ -33,6 +35,8 @@ interface DragState {
   origDayIndex: number;
   /** current ghost time (epoch ms) */
   ghostStartTime: number;
+  /** has significantly moved? */
+  hasMoved: boolean;
 }
 
 interface ResizeState {
@@ -201,11 +205,13 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
     setDrag({
       entryId,
       startY: e.clientY,
+      startX: e.clientX,
       origStartTime: entry.startTime,
       origEndTime: entry.endTime,
       origDay: entryDay,
       origDayIndex,
       ghostStartTime: entry.startTime,
+      hasMoved: false,
     });
   }, [entries, days]);
 
@@ -229,6 +235,9 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
 
     const onMove = (e: MouseEvent) => {
       const deltaY = e.clientY - drag.startY;
+      const deltaX = e.clientX - drag.startX;
+      const hasMoved = drag.hasMoved || (deltaX * deltaX + deltaY * deltaY > 25);
+      
       const deltaMs = (deltaY / hourHeight) * 3_600_000;
       // Detect which day column is under cursor, then shift by whole days.
       let dayOffset = 0;
@@ -244,11 +253,15 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
       const rawStart = drag.origStartTime + deltaMs + dayOffset * 86_400_000;
       const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
       const snapped = snapToMinutes(rawStart, snapMin);
-      setDrag((prev) => prev ? { ...prev, ghostStartTime: snapped } : null);
+      setDrag((prev) => prev ? { ...prev, ghostStartTime: snapped, hasMoved } : null);
     };
 
     const onUp = async (e: MouseEvent) => {
       if (!drag) return;
+      if (!drag.hasMoved) {
+        setDrag(null);
+        return;
+      }
       const duration = drag.origEndTime - drag.origStartTime;
       const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
       const newStart = snapToMinutes(drag.ghostStartTime, snapMin);
@@ -380,7 +393,7 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
   // Merge ghost position into entries during drag or resize
   const displayEntries = useMemo(() => {
     let result = entries;
-    if (drag) {
+    if (drag && drag.hasMoved) {
       const duration = drag.origEndTime - drag.origStartTime;
       result = result.map((e) =>
         e.id === drag.entryId

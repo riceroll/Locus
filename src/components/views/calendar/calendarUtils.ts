@@ -165,10 +165,11 @@ export function layoutDayEntries(entries: CalendarEntry[]): LayoutEntry[] {
       currentGroup.push({ entry, col: 0 });
       currentGroupEnd = Math.max(entry.endTime, entry.startTime + 60000); // at least 1 min
     } else if (entry.startTime < currentGroupEnd) {
-      // Find the first available column at this entry's start time
-      const usedColsAtStart = currentGroup
-        .filter(c => Math.max(c.entry.endTime, c.entry.startTime + 60000) > entry.startTime)
-        .map(c => c.col);
+      // Find columns that overlap with this entry
+      const overlappingEntries = currentGroup.filter(
+        c => Math.max(c.entry.endTime, c.entry.startTime + 60000) > entry.startTime
+      );
+      const usedColsAtStart = overlappingEntries.map(c => c.col);
         
       let col = 0;
       while (usedColsAtStart.includes(col)) col++;
@@ -183,10 +184,11 @@ export function layoutDayEntries(entries: CalendarEntry[]): LayoutEntry[] {
   }
   if (currentGroup.length > 0) groups.push(currentGroup);
 
-  const MAX_COLS = 4;
+  const MAX_COLS = 6;
   const result: LayoutEntry[] = [];
   
   for (const group of groups) {
+    // Determine the max columns actually needed in this group so they all share width evenly
     const colCount = Math.min(Math.max(...group.map(g => g.col)) + 1, MAX_COLS);
     for (const item of group) {
       result.push({
