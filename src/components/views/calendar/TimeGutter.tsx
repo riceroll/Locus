@@ -4,7 +4,7 @@ const HOURS = Array.from({ length: 25 }, (_, i) => i); // 0..24
 
 export const TimeGutter = ({ hourHeight }: { hourHeight: number }) => (
   <div
-    className="w-14 shrink-0 relative select-none border-r border-slate-100 dark:border-neutral-700/50 bg-slate-50 dark:bg-neutral-900"
+    className="w-14 shrink-0 relative select-none border-r border-slate-200 dark:border-neutral-700/50 bg-slate-50 dark:bg-neutral-900"
     style={{ height: 24 * hourHeight }}
   >
     {HOURS.map((h) => (

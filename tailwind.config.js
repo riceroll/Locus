@@ -4,6 +4,26 @@ module.exports = {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      animation: {
+        'ambient-ping': 'ambient-ping 4s cubic-bezier(0, 0, 0.3, 1) infinite',
+        'ambient-glow': 'ambient-glow 3s ease-in-out infinite',
+        'ambient-spin': 'ambient-spin 8s linear infinite',
+      },
+      keyframes: {
+        'ambient-ping': {
+          '0%': { transform: 'scale(1)', opacity: '0.5' },
+          '50%': { transform: 'scale(2.5)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '0' },
+        },
+        'ambient-glow': {
+          '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+          '50%': { opacity: '1', transform: 'scale(1.05)' },
+        },
+        'ambient-spin': {
+          '0%': { transform: 'translate(-50%, -50%) rotate(0deg)' },
+          '100%': { transform: 'translate(-50%, -50%) rotate(360deg)' },
+        }
+      },
       colors: {
         brand: {
           50:  'rgb(var(--brand-50) / <alpha-value>)',
@@ -60,4 +80,3 @@ module.exports = {
   },
   plugins: [],
 }
-

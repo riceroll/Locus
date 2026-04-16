@@ -235,6 +235,34 @@ export const ListView = () => {
     [tasks],
   );
 
+  const incompleteDescendants = useMemo(() => {
+    const parentMap = new Map<string, Task[]>();
+    for (const t of tasks) {
+      if (t.parent_id) {
+        let arr = parentMap.get(t.parent_id);
+        if (!arr) { arr = []; parentMap.set(t.parent_id, arr); }
+        arr.push(t);
+      }
+    }
+    const incomp = new Set<string>();
+    const check = (id: string): boolean => {
+      if (incomp.has(id)) return true;
+      const children = parentMap.get(id);
+      if (!children) return false;
+      for (const c of children) {
+        if (!doneSet.has(c.status_id) || check(c.id)) {
+          incomp.add(id);
+          return true;
+        }
+      }
+      return false;
+    };
+    for (const t of tasks) {
+      if (!incomp.has(t.id)) check(t.id);
+    }
+    return incomp;
+  }, [tasks, doneSet]);
+
   // Build tree rows (or flat list when filtering / quick-filter active)
   const renderRows = useMemo(() => {
     const useFlat = isFiltered || activeFilters.actionableOnly || activeFilters.viewableOnly;
@@ -243,9 +271,9 @@ export const ListView = () => {
       let pool = filteredTasks;
 
       if (activeFilters.actionableOnly) {
-        // Actionable: leaf + incomplete + visible
+        // Actionable: leaf/clean-parent + incomplete + visible
         pool = pool.filter((t) => {
-          if (parentIds.has(t.id)) return false;
+          if (incompleteDescendants.has(t.id)) return false;
           if (doneSet.has(t.status_id)) return false;
           return true;
         });

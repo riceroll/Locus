@@ -603,57 +603,71 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-100 dark:border-neutral-700 bg-slate-50/50 dark:bg-neutral-800/50">
-          {showDeleteConfirm ? (
-            <div className="flex flex-col gap-2">
-              <span className="text-xs text-slate-600 dark:text-neutral-300 font-medium">
-                {subtasks.length > 0
-                  ? `${t(language, 'section_subtasks')}: ${subtasks.length}`
-                  : t(language, 'confirm_delete_task')}
+        <div className="px-6 py-3 border-t border-slate-100 dark:border-neutral-700 bg-slate-50/50 dark:bg-neutral-800/50 flex items-center justify-between min-h-[52px]">
+          <div className="text-xs shrink-0 mr-4">
+            {showDeleteConfirm && subtasks.length > 0 ? (
+              <span className="text-red-500 dark:text-red-400 font-medium">
+                {t(language, 'section_subtasks')}: {subtasks.length}
               </span>
-              <div className="flex items-center gap-2">
+            ) : (
+              <span className="text-slate-400 dark:text-neutral-500">
+                {t(language, 'task_created_prefix')} {new Date(task.created_at).toLocaleDateString()}
+                {task.parent_id && <span className="ml-2 text-slate-300 dark:text-neutral-600">{t(language, 'text_subtask_indicator')}</span>}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 shrink-0">
+            {showDeleteConfirm && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="text-xs text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300 transition px-2"
+              >
+                {t(language, 'cancel')}
+              </button>
+            )}
+
+            {showDeleteConfirm && subtasks.length > 0 ? (
+              <>
                 <button
                   type="button"
                   onClick={async () => { onClose(); await deleteTask(currentTaskId); }}
                   className="text-xs px-3 py-1.5 rounded bg-orange-500 text-white hover:bg-orange-600 transition"
                 >
-                  {subtasks.length > 0 ? t(language, 'btn_delete_task_only') : t(language, 'btn_yes_delete')}
+                  {t(language, 'btn_delete_task_only')}
                 </button>
-                {subtasks.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={async () => { onClose(); await deleteTaskRecursive(currentTaskId); }}
-                    className="text-xs px-3 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 transition"
-                  >
-                    {t(language, 'btn_delete_task_and_subtasks')}
-                  </button>
-                )}
                 <button
                   type="button"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="text-xs px-3 py-1.5 rounded bg-slate-100 dark:bg-neutral-700 text-slate-600 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-600 transition"
+                  onClick={async () => { onClose(); await deleteTaskRecursive(currentTaskId); }}
+                  className="text-xs px-3 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 transition"
                 >
-                  {t(language, 'cancel')}
+                  {t(language, 'btn_delete_task_and_subtasks')}
                 </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400 dark:text-neutral-500">
-                {t(language, 'task_created_prefix')} {new Date(task.created_at).toLocaleDateString()}
-                {task.parent_id && <span className="ml-2 text-slate-300 dark:text-neutral-600">{t(language, 'text_subtask_indicator')}</span>}
-              </span>
+              </>
+            ) : (
               <Tooltip id="delete-task">
                 <button
                   type="button"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="p-1.5 rounded text-slate-400 dark:text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                  onClick={async () => {
+                    if (!showDeleteConfirm) {
+                      setShowDeleteConfirm(true);
+                    } else {
+                      onClose();
+                      await deleteTask(currentTaskId);
+                    }
+                  }}
+                  className={`p-1.5 rounded transition ${
+                    showDeleteConfirm
+                      ? 'bg-red-500 text-white hover:bg-red-600'
+                      : 'text-slate-400 dark:text-neutral-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40'
+                  }`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </Tooltip>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

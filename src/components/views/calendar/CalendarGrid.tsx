@@ -192,11 +192,11 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
 
   // ── Per-day entry lookup ──────────────────────────────────────────────────────
   // ── Mouse-drag to reposition entries ─────────────────────────────────────────
-  const handleEntryDragStart = useCallback((entryId: string, e: React.MouseEvent) => {
+  const handleEntryDragStart = useCallback((entryId: string, e: React.MouseEvent, columnDay: Date) => {
     e.preventDefault();
     const entry = entries.find((en) => en.id === entryId);
     if (!entry || entry.isActive) return;
-    const entryDay = startOfDay(new Date(entry.startTime));
+    const entryDay = startOfDay(columnDay);
     const origDayIndex = Math.max(0, days.findIndex((d) => isSameDay(d, entryDay)));
     setDrag({
       entryId,
@@ -209,7 +209,7 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
     });
   }, [entries, days]);
 
-  const handleResizeStart = useCallback((entryId: string, edge: 'top' | 'bottom', e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((entryId: string, edge: 'top' | 'bottom', e: React.MouseEvent, _columnDay: Date) => {
     e.preventDefault();
     const entry = entries.find((en) => en.id === entryId);
     if (!entry || (entry.isActive && edge === 'bottom')) return;
@@ -275,7 +275,7 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
   // ── Mouse resize (top/bottom edge) ───────────────────────────────────────────
   useEffect(() => {
     if (!resize) return;
-    const MIN_DURATION = 15 * 60_000; // 15 min
+    const MIN_DURATION = 1 * 60_000; // 1 min
 
     const onMove = (e: MouseEvent) => {
       const deltaY = e.clientY - resize.startY;
@@ -399,7 +399,11 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
   }, [entries, drag, resize]);
 
   const displayEntriesForDay = useCallback(
-    (day: Date) => displayEntries.filter((e) => isSameDay(new Date(e.startTime), day)),
+    (day: Date) => {
+      const msDayStart = day.getTime();
+      const msDayEnd = msDayStart + 24 * 3600 * 1000;
+      return displayEntries.filter((e) => e.startTime < msDayEnd && e.endTime > msDayStart);
+    },
     [displayEntries],
   );
 

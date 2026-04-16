@@ -256,14 +256,38 @@ export const KanbanView = () => {
     for (const col of columns) map[col.id] = [];
 
     const doneStatusIds = new Set(statuses.filter((s) => Number(s.is_done)).map((s) => s.id));
-    const parentIds = new Set(tasks.filter((t) => t.parent_id).map((t) => t.parent_id!));
+
+    const incompleteDescendants = new Set<string>();
+    const parentMap = new Map<string, Task[]>();
+    for (const t of tasks) {
+      if (t.parent_id) {
+        let arr = parentMap.get(t.parent_id);
+        if (!arr) { arr = []; parentMap.set(t.parent_id, arr); }
+        arr.push(t);
+      }
+    }
+    const check = (id: string): boolean => {
+      if (incompleteDescendants.has(id)) return true;
+      const children = parentMap.get(id);
+      if (!children) return false;
+      for (const c of children) {
+        if (!doneStatusIds.has(c.status_id) || check(c.id)) {
+          incompleteDescendants.add(id);
+          return true;
+        }
+      }
+      return false;
+    };
+    for (const t of tasks) {
+      if (!incompleteDescendants.has(t.id)) check(t.id);
+    }
 
     let candidates = filtered;
 
     if (activeFilters.actionableOnly) {
-      // Actionable: leaf + incomplete
+      // Actionable: leaf/clean-parent + incomplete
       candidates = candidates.filter((t) => {
-        if (parentIds.has(t.id)) return false;
+        if (incompleteDescendants.has(t.id)) return false;
         if (doneStatusIds.has(t.status_id)) return false;
         return true;
       });

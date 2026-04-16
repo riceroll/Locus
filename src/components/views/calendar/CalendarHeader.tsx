@@ -78,7 +78,7 @@ export const CalendarHeader = ({
     </div>
 
     {/* Day headers row (sticky, rendered here so it scrolls with the container as sticky) */}
-    <div className="flex border-t border-slate-100 dark:border-neutral-700/50">
+    <div className="flex border-t border-slate-200 dark:border-neutral-700/50">
       <div className="w-14 shrink-0" /> {/* gutter spacer */}
       {days.map((day) => {
         const today = isToday(day);

@@ -10,8 +10,8 @@ interface Props {
   hourHeight: number;
   entries: CalendarEntry[];
   onEntryClick: (entryId: string, e: React.MouseEvent) => void;
-  onEntryDragStart?: (entryId: string, e: React.MouseEvent) => void;
-  onEntryResizeStart?: (entryId: string, edge: 'top' | 'bottom', e: React.MouseEvent) => void;
+  onEntryDragStart?: (entryId: string, e: React.MouseEvent, day: Date) => void;
+  onEntryResizeStart?: (entryId: string, edge: 'top' | 'bottom', e: React.MouseEvent, day: Date) => void;
   onSlotClick?: (time: number) => void;
   /** highlight a drop indicator at this epoch ms (from external sidebar drag) */
   dropIndicatorTime?: number | null;
@@ -63,7 +63,7 @@ export const DayColumn = ({
     <div
       ref={colRef}
       data-day-col={day.toISOString()}
-      className={`flex-1 relative border-l border-slate-100 dark:border-neutral-700/50 ${todayCol ? 'bg-brand-50/20 dark:bg-brand-900/10' : ''}`}
+      className={`flex-1 relative border-l border-slate-200 dark:border-neutral-700/50 ${todayCol ? 'bg-brand-50/20 dark:bg-brand-900/10' : ''}`}
       style={{ height: totalHeight }}
       onMouseDown={handleColumnMouseDown}
       onClick={handleColumnClick}
@@ -72,19 +72,20 @@ export const DayColumn = ({
       {HOURS.map((h) => (
         <div
           key={h}
-          className="absolute left-0 right-0 border-t border-slate-100 dark:border-neutral-700/50"
+          className="absolute left-0 right-0 border-t-[1.5px] border-slate-200 dark:border-neutral-700/50"
+          style={{ top: h * hourHeight }}
         />
       ))}
       {/* Half-hour lines */}
       {HOURS.map((h) => (
         <div
           key={`hh-${h}`}
-          className="absolute left-0 right-0 border-t border-slate-50 dark:border-neutral-700/25"
+          className="absolute left-0 right-0 border-t-[2px] border-slate-100 dark:border-neutral-700/25"
           style={{ top: (h + 0.5) * hourHeight }}
         />
       ))}
       {/* Top border closure */}
-      <div className="absolute left-0 right-0 top-0 border-t border-slate-100 dark:border-neutral-700/50" />
+      <div className="absolute left-0 right-0 top-0 border-t border-slate-200 dark:border-neutral-700/50" />
 
       {/* Now indicator */}
       {todayCol && <NowIndicator dayStart={day} hourHeight={hourHeight} />}
@@ -105,8 +106,8 @@ export const DayColumn = ({
             dayStart={day}
             hourHeight={hourHeight}
             onClick={onEntryClick}
-            onDragStart={onEntryDragStart}
-            onResizeStart={onEntryResizeStart}
+            onDragStart={(id, e) => onEntryDragStart?.(id, e, day)}
+            onResizeStart={(id, edge, e) => onEntryResizeStart?.(id, edge, e, day)}
           />
         </div>
       ))}

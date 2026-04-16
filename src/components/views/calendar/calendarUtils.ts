@@ -58,7 +58,7 @@ export function pxToTime(px: number, dayStart: Date, hourHeight: number): number
 }
 
 /** Snap epoch ms to the nearest `snap`-minute boundary. */
-export function snapToMinutes(epochMs: number, snap = 15): number {
+export function snapToMinutes(epochMs: number, snap = 1): number {
   const snapMs = snap * 60_000;
   return Math.round(epochMs / snapMs) * snapMs;
 }
@@ -155,30 +155,47 @@ export interface LayoutEntry {
 /** Assigns non-overlapping columns to each entry for side-by-side display. */
 export function layoutDayEntries(entries: CalendarEntry[]): LayoutEntry[] {
   const sorted = [...entries].sort((a, b) => a.startTime - b.startTime);
-  const cols: number[] = []; // cols[i] = endTime of the last entry placed in column i
-  const assigned: { entry: CalendarEntry; col: number }[] = [];
+  
+  const groups: { entry: CalendarEntry, col: number }[][] = [];
+  let currentGroup: { entry: CalendarEntry, col: number }[] = [];
+  let currentGroupEnd = -1;
 
   for (const entry of sorted) {
-    // Find the first column whose last entry has ended before this one starts
-    let assignedCol = cols.findIndex((colEnd) => colEnd <= entry.startTime);
-    if (assignedCol === -1) {
-      assignedCol = cols.length;
-      cols.push(entry.endTime);
+    if (currentGroup.length === 0) {
+      currentGroup.push({ entry, col: 0 });
+      currentGroupEnd = Math.max(entry.endTime, entry.startTime + 60000); // at least 1 min
+    } else if (entry.startTime < currentGroupEnd) {
+      // Find the first available column at this entry's start time
+      const usedColsAtStart = currentGroup
+        .filter(c => Math.max(c.entry.endTime, c.entry.startTime + 60000) > entry.startTime)
+        .map(c => c.col);
+        
+      let col = 0;
+      while (usedColsAtStart.includes(col)) col++;
+      
+      currentGroup.push({ entry, col });
+      currentGroupEnd = Math.max(currentGroupEnd, Math.max(entry.endTime, entry.startTime + 60000));
     } else {
-      cols[assignedCol] = entry.endTime;
+      groups.push(currentGroup);
+      currentGroup = [{ entry, col: 0 }];
+      currentGroupEnd = Math.max(entry.endTime, entry.startTime + 60000);
     }
-    assigned.push({ entry, col: assignedCol });
   }
+  if (currentGroup.length > 0) groups.push(currentGroup);
 
-  // For each entry, colCount = (max col index among entries that overlap it) + 1
-  // This way non-overlapping entries keep full width while overlapping ones share it.
   const MAX_COLS = 4;
-  return assigned.map(({ entry, col }) => {
-    const maxCol = assigned
-      .filter(({ entry: other }) => other.startTime < entry.endTime && other.endTime > entry.startTime)
-      .reduce((max, { col: c }) => Math.max(max, c), 0);
-    const finalColCount = Math.min(maxCol + 1, MAX_COLS);
-    const finalCol = Math.min(col, MAX_COLS - 1);
-    return { entry, col: finalCol, colCount: finalColCount };
-  });
+  const result: LayoutEntry[] = [];
+  
+  for (const group of groups) {
+    const colCount = Math.min(Math.max(...group.map(g => g.col)) + 1, MAX_COLS);
+    for (const item of group) {
+      result.push({
+        entry: item.entry,
+        col: Math.min(item.col, MAX_COLS - 1),
+        colCount,
+      });
+    }
+  }
+  
+  return result;
 }

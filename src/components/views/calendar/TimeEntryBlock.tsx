@@ -17,11 +17,18 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
   const { language } = useSettingsStore();
   const clickStartRef = useRef<{ x: number, y: number } | null>(null);
 
-  const top = timeToPx(entry.startTime, dayStart, hourHeight);
-  const bottom = timeToPx(entry.endTime, dayStart, hourHeight);
-  const MIN_BLOCK_PX = 20; // ~one line of text
+  const rawTop = timeToPx(entry.startTime, dayStart, hourHeight);
+  const rawBottom = timeToPx(entry.endTime, dayStart, hourHeight);
+  const maxPx = 24 * hourHeight;
+  
+  // Clamp logic for cross-day tasks
+  const top = Math.max(0, Math.min(rawTop, maxPx));
+  const bottom = Math.max(0, Math.min(rawBottom, maxPx));
+  
+  const MIN_BLOCK_PX = 1; // Allow down to ~1 min visually
   const height = Math.max(MIN_BLOCK_PX, bottom - top);
   const isShort = height < 38;
+  const isTiny = height < 14;
   const durationSec = Math.round((entry.endTime - entry.startTime) / 1000);
 
   // Column layout: divide width evenly among overlapping cols
@@ -31,7 +38,7 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
 
   return (
     <div
-      className={`absolute cursor-pointer select-none rounded-[2px]
+      className={`group absolute cursor-pointer select-none
         transition-opacity hover:opacity-90 active:opacity-75
         ${entry.isActive ? 'ring-2 ring-red-400 ring-offset-1' : ''}
       `}
@@ -43,6 +50,12 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
         backgroundColor: `${entry.color}33`,
         borderColor: `${entry.color}99`,
         borderWidth: '1px',
+        borderTopWidth: rawTop < 0 ? 0 : '1px',
+        borderBottomWidth: rawBottom > maxPx ? 0 : '1px',
+        borderTopLeftRadius: rawTop < 0 ? 0 : '2px',
+        borderTopRightRadius: rawTop < 0 ? 0 : '2px',
+        borderBottomLeftRadius: rawBottom > maxPx ? 0 : '2px',
+        borderBottomRightRadius: rawBottom > maxPx ? 0 : '2px',
         borderStyle: 'solid',
         zIndex: 5 + col,
       }}
@@ -72,7 +85,7 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
       }}
     >
       {/* Top resize handle — tight 3px zone */}
-      {onResizeStart && (
+      {onResizeStart && rawTop >= 0 && (
         <div
           className="absolute top-[-1px] left-0 right-0 h-[4px] cursor-ns-resize z-10"
           onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); onResizeStart(entry.id, 'top', e); }}
@@ -80,27 +93,52 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
         />
       )}
       {/* Bottom resize handle — tight 3px zone */}
-      {onResizeStart && !entry.isActive && (
+      {onResizeStart && !entry.isActive && rawBottom <= maxPx && (
         <div
           className="absolute bottom-[-1px] left-0 right-0 h-[4px] cursor-ns-resize z-10"
           onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); onResizeStart(entry.id, 'bottom', e); }}
           onClick={(e) => e.stopPropagation()}
         />
       )}
-      <div className="px-1.5 py-0.5 h-full flex flex-col justify-start overflow-hidden">
-        <div className="text-slate-900 dark:text-neutral-200 text-[11px] font-semibold leading-tight truncate">
-          {entry.taskTitle}
-        </div>
-        {!isShort && (
+      <div className={`px-1.5 h-full flex flex-col justify-start overflow-hidden relative z-10 pointer-events-none ${isTiny ? 'py-0' : 'py-0.5'}`}>
+        {!isTiny && (
+          <div className="text-slate-900 dark:text-neutral-200 text-[11px] font-semibold leading-tight truncate">
+            {entry.taskTitle}
+          </div>
+        )}
+        {!isShort && !isTiny && (
           <div className="text-slate-700 dark:text-neutral-200 text-[10px] leading-tight truncate mt-0.5">
             {formatTime(entry.startTime)} – {entry.isActive ? `▶ ${t(language, 'text_running')}` : formatTime(entry.endTime)}
           </div>
         )}
-        {!isShort && durationSec > 60 && (
+        {!isShort && !isTiny && durationSec >= 60 && (
           <div className="text-slate-600 dark:text-neutral-300 text-[10px] leading-tight">
             {formatDuration(durationSec)}
           </div>
         )}
+      </div>
+
+      {/* Hover Concise Info Popup */}
+      <div
+        className={`pointer-events-none absolute left-full ml-2 w-max max-w-[260px] z-[100] transition-all duration-200 origin-left opacity-0 invisible group-hover:scale-100 group-hover:opacity-100 group-hover:visible ${
+          height < 40 ? 'top-0 scale-95' : 'top-1/2 -translate-y-1/2 scale-95'
+        }`}
+      >
+        <div className="bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-700/60 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.15)] dark:shadow-black/50 rounded-xl p-3 flex flex-col gap-1.5 ring-1 ring-black/5 dark:ring-white/5">
+          <div className="text-[13px] font-bold text-neutral-800 dark:text-neutral-100 leading-snug break-words">
+            {entry.taskTitle}
+          </div>
+          <div className="flex items-center justify-between gap-4 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-neutral-700/50 pt-1.5">
+            <span className="flex-shrink-0">
+              {formatTime(entry.startTime)} – {entry.isActive ? t(language, 'text_running') : formatTime(entry.endTime)}
+            </span>
+            {durationSec >= 60 && (
+              <span className="text-brand-600 dark:text-brand-400 font-semibold bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded">
+                {formatDuration(durationSec)}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

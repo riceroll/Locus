@@ -128,22 +128,27 @@ export const TimerBar = () => {
   return (
     <div
       data-tauri-drag-region
-      className={`group/timerbar sticky top-0 z-50 flex items-center justify-between px-5 py-3 transition-colors duration-400 relative border-b ${
+      className={`group/timerbar sticky top-0 z-50 flex items-center justify-between px-5 py-3 transition-all duration-700 relative border-b ${
         isRunning
-          ? 'bg-brand-50/70 dark:bg-brand-950/30 border-brand-200/50 dark:border-brand-800/40 backdrop-blur-xl'
-          : 'bg-white/80 dark:bg-neutral-900/80 border-slate-200 dark:border-neutral-800 backdrop-blur-xl'
+          ? 'bg-brand-50/40 dark:bg-brand-950/20 border-brand-200/30 dark:border-brand-800/30 backdrop-blur-xl'
+          : 'bg-white/90 dark:bg-neutral-900/90 border-slate-200 dark:border-neutral-800 backdrop-blur-xl'
       }`}
     >
-      {/* Active Top Glow Line */}
+      {/* Active Ambient Orbit Glow */}
       {isRunning && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-brand-500/70 to-transparent opacity-80" />
+        <div 
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden mix-blend-plus-lighter dark:mix-blend-screen"
+          style={{ maskImage: 'radial-gradient(ellipse at center, transparent 60%, black 100%)', WebkitMaskImage: 'radial-gradient(ellipse at center, transparent 60%, black 100%)' }}
+        >
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[600%] bg-[conic-gradient(from_0deg,transparent_70%,rgb(var(--brand-500)/0.8)_100%)] blur-[30px] animate-ambient-spin origin-center" />
+        </div>
       )}
 
-      <div className="relative flex items-center gap-3.5 min-w-0 flex-1">
+      <div className="relative z-10 flex items-center gap-3.5 min-w-0 flex-1">
         {isRunning ? (
           <div className="relative flex items-center justify-center w-3.5 h-3.5 shrink-0 ml-1">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-60 animate-ping" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-500" />
+            <span className="absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-50 animate-ambient-ping" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-500 shadow-[0_0_8px_rgb(var(--brand-500)/1)]" />
           </div>
         ) : (
           <Search className="w-4 h-4 text-neutral-400 shrink-0 ml-1" />
@@ -188,9 +193,7 @@ export const TimerBar = () => {
                     }}
                     className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 border-b border-black/5 dark:border-white/5 transition-colors group/new"
                   >
-                    <div className="flex items-center justify-center w-6 h-6 rounded-md bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400">
-                      <Plus className="w-3.5 h-3.5" />
-                    </div>
+                    <Plus className="w-4 h-4 ml-1 text-brand-500" />
                     <span className="text-brand-600 dark:text-brand-400 font-medium whitespace-nowrap">{t(language, 'timer_new_task_prefix')}</span>
                     <span className="truncate text-neutral-800 dark:text-neutral-200 font-medium">{query.trim()}</span>
                   </button>
@@ -211,10 +214,7 @@ export const TimerBar = () => {
                           isHighlighted ? 'bg-black/5 dark:bg-white/5' : 'hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
                       >
-                        <div className="flex items-center justify-center w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 shrink-0">
-                          <Square className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="truncate flex-1 text-neutral-700 dark:text-neutral-200 font-medium">{task.title}</span>
+                        <span className="truncate flex-1 text-neutral-700 dark:text-neutral-200 font-medium pl-2">{task.title}</span>
                         {proj && (
                           <span
                             className="shrink-0 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium tracking-wide"
@@ -234,7 +234,7 @@ export const TimerBar = () => {
         )}
       </div>
 
-      <div className="flex items-center gap-5 shrink-0 px-2">
+      <div className="relative z-10 flex items-center gap-5 shrink-0 px-2">
         {isRunning && activeTask && (
           <div className="relative inline-flex shrink-0 group/project">
             {activeTask.project_id ? (() => {
@@ -265,8 +265,8 @@ export const TimerBar = () => {
             </select>
           </div>
         )}
-        <div className="flex items-center gap-3 bg-white/50 dark:bg-black/20 rounded-lg pr-1 pl-3 shadow-inner shadow-black/5 dark:shadow-white/5 border border-black/5 dark:border-white/5">
-          <span className={`font-mono text-[14px] leading-none font-bold tabular-nums tracking-wide ${isRunning ? 'text-brand-700 dark:text-brand-300' : 'text-transparent'}`}>
+        <div className={`flex items-center gap-3 rounded-lg pr-1 pl-3 transition-all ${isRunning ? 'bg-white/50 dark:bg-black/20 shadow-inner shadow-black/5 dark:shadow-white/5 border border-black/5 dark:border-white/5' : ''}`}>
+          <span className={`font-mono text-[14px] leading-none font-bold tabular-nums tracking-wide transition-colors duration-500 ${isRunning ? 'text-brand-700 dark:text-brand-300' : 'text-neutral-300 dark:text-neutral-700'}`}>
             {isRunning ? formatDuration(elapsed) : '00:00:00'}
           </span>
           <button
@@ -274,7 +274,7 @@ export const TimerBar = () => {
             className={`flex items-center justify-center w-7 h-7 rounded-md transition-all ${
               isRunning
                 ? 'bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 shadow-sm'
-                : 'bg-transparent text-neutral-300 dark:text-neutral-700 cursor-default opacity-0'
+                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-300 dark:text-neutral-700 cursor-default'
             }`}
             title={t(language, isRunning ? 'tooltip_stop_timer' : 'tooltip_start_timer')}
             disabled={!isRunning}
