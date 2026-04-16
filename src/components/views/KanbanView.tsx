@@ -19,7 +19,7 @@ import { Plus, Zap, Eye } from 'lucide-react';
 import { applyTaskFilters } from '../../lib/taskFilters';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useStatusStore } from '../../store/useStatusStore';
-import { useTaskStore, type Task } from '../../store/useTaskStore';
+import { useTaskStore, collectDescendantIds, type Task } from '../../store/useTaskStore';
 import { useTimerStore } from '../../store/useTimerStore';
 import { useViewStore } from '../../store/useViewStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -400,11 +400,29 @@ export const KanbanView = () => {
           insertIdx = activeY >= overMidY ? overIndex + 1 : overIndex;
         }
       }
-      // Insert dragged task at the target position
-      targetTasks.splice(insertIdx, 0, task);
+      
+      const moveSubtasks = e.activatorEvent instanceof MouseEvent && e.activatorEvent.shiftKey;
+      const taskIdsToMove: string[] = [taskId];
+      const tasksToInsert: Task[] = [task];
+      
+      if (moveSubtasks) {
+        const descendantIds = collectDescendantIds(taskId, tasks);
+        for (const dId of descendantIds) {
+          if (!taskIdsToMove.includes(dId)) {
+            taskIdsToMove.push(dId);
+            const dTask = tasks.find((t) => t.id === dId);
+            if (dTask && dTask.status_id !== targetStatusId) {
+               tasksToInsert.push(dTask);
+            }
+          }
+        }
+      }
+
+      // Insert dragged task(s) at the target position
+      targetTasks.splice(insertIdx, 0, ...tasksToInsert);
 
       // Atomic cross-column move: single optimistic update + single fetchTasks
-      await moveTaskToColumn(taskId, targetStatusId, targetTasks.map((t, i) => ({ id: t.id, position: i })));
+      await moveTaskToColumn(taskIdsToMove, targetStatusId, targetTasks.map((t, i) => ({ id: t.id, position: i })));
     }
   };
 

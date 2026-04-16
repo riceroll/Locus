@@ -37,7 +37,7 @@ interface TaskState {
   addNextTask: (afterTaskId: string, title: string) => Promise<void>;
   moveTask: (taskId: string, newParentId: string | null, afterSiblingId: string | null) => Promise<void>;
   batchUpdatePositions: (orderedIds: { id: string; position: number }[]) => Promise<void>;
-  moveTaskToColumn: (taskId: string, targetStatusId: string, positionUpdates: { id: string; position: number }[]) => Promise<void>;
+  moveTaskToColumn: (taskIds: string | string[], targetStatusId: string, positionUpdates: { id: string; position: number }[]) => Promise<void>;
 }
 
 // ── Relationship helpers ─────────────────────────────────────────
@@ -55,7 +55,7 @@ function wouldCycleParent(taskId: string, newParentId: string | null, tasks: Tas
   return false;
 }
 
-function collectDescendantIds(taskId: string, tasks: Task[]): string[] {
+export function collectDescendantIds(taskId: string, tasks: Task[]): string[] {
   const result: string[] = [];
   const queue = [taskId];
   while (queue.length) {
@@ -428,23 +428,29 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     }
   },
 
-  moveTaskToColumn: async (taskId, targetStatusId, positionUpdates) => {
+  moveTaskToColumn: async (taskIdOrIds, targetStatusId, positionUpdates) => {
     try {
+      const taskIds = Array.isArray(taskIdOrIds) ? taskIdOrIds : [taskIdOrIds];
       const now = Date.now();
       const posMap = new Map(positionUpdates.map(({ id, position }) => [id, position]));
+      const idsSet = new Set(taskIds);
+
       // Single atomic optimistic update: status change + all position changes at once
       set({
         tasks: get().tasks.map((t) => {
-          if (t.id === taskId) return { ...t, status_id: targetStatusId, position: posMap.get(t.id) ?? t.position, updated_at: now };
+          if (idsSet.has(t.id)) return { ...t, status_id: targetStatusId, position: posMap.get(t.id) ?? t.position, updated_at: now };
           if (posMap.has(t.id)) return { ...t, position: posMap.get(t.id)!, updated_at: now };
           return t;
         }),
       });
       const db = await getDb();
-      await db.execute('UPDATE tasks SET status_id = $1, updated_at = $2 WHERE id = $3', [targetStatusId, now, taskId]);
+      for (const id of taskIds) {
+        await db.execute('UPDATE tasks SET status_id = $1, updated_at = $2 WHERE id = $3', [targetStatusId, now, id]);
+      }
       for (const { id, position } of positionUpdates) {
         await db.execute('UPDATE tasks SET position = $1, updated_at = $2 WHERE id = $3', [position, now, id]);
       }
+      // Re-fetch to ensure sync with subtasks / position triggers
       await get().fetchTasks();
     } catch (e: any) {
       console.error('moveTaskToColumn error:', e);

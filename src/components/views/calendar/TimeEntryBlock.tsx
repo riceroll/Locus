@@ -39,7 +39,7 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
   return (
     <div
       className={`group absolute cursor-pointer select-none
-        transition-opacity hover:opacity-90 active:opacity-75
+        transition-opacity hover:opacity-90 active:opacity-75 hover:!z-[100]
         ${entry.isActive ? 'ring-2 ring-red-400 ring-offset-1' : ''}
       `}
       style={{
@@ -120,12 +120,12 @@ export const TimeEntryBlock = ({ layoutEntry, dayStart, hourHeight, onClick, onD
 
       {/* Hover Concise Info Popup */}
       <div
-        className={`pointer-events-none absolute left-full ml-2 w-max max-w-[260px] z-[100] transition-all duration-200 origin-left opacity-0 invisible group-hover:scale-100 group-hover:opacity-100 group-hover:visible ${
+        className={`pointer-events-none absolute left-full ml-2 w-max max-w-[260px] z-[110] transition-all duration-200 origin-left opacity-0 invisible group-hover:scale-100 group-hover:opacity-100 group-hover:visible ${
           height < 40 ? 'top-0 scale-95' : 'top-1/2 -translate-y-1/2 scale-95'
         }`}
       >
-        <div className="bg-white/95 dark:bg-neutral-800/95 backdrop-blur-xl border border-neutral-200/60 dark:border-neutral-700/60 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.15)] dark:shadow-black/50 rounded-xl p-3 flex flex-col gap-1.5 ring-1 ring-black/5 dark:ring-white/5">
-          <div className="text-[13px] font-bold text-neutral-800 dark:text-neutral-100 leading-snug break-words">
+        <div className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.2)] dark:shadow-black/60 rounded-xl p-3 flex flex-col gap-1.5 ring-1 ring-black/5 dark:ring-white/10">
+          <div className="text-[13px] font-bold text-neutral-900 dark:text-neutral-50 leading-snug break-words">
             {entry.taskTitle}
           </div>
           <div className="flex items-center justify-between gap-4 text-[11px] font-medium text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-neutral-700/50 pt-1.5">
