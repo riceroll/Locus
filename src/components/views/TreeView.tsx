@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTaskStore, type Task } from '../../store/useTaskStore';
+import { useSettingsStore } from '../../store/useSettingsStore';
 import { TreeNode } from './tree/TreeNode';
 import {
   DndContext,
@@ -9,6 +10,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  type Modifier,
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
@@ -40,7 +42,14 @@ type WebKitGestureEvent = Event & {
 };
 
 export const TreeView = () => {
+  const { mouseWheelZoom } = useSettingsStore();
+
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  const dragOverlayModifier: Modifier = ({ transform }) => {
+    return transform;
+  };
+
   const [scale, setScale] = useState(1);
   const [forcedCollapsedRootIds, setForcedCollapsedRootIds] = useState<Set<string> | null>(null);
   // Scroll correction: after collapse/restore, move viewport so the card stays under the mouse
@@ -163,7 +172,7 @@ export const TreeView = () => {
 
     const handleWheel = (event: WheelEvent) => {
       // Zoom with Cmd/Ctrl
-      if (event.ctrlKey || event.metaKey) {
+      if (mouseWheelZoom || event.ctrlKey || event.metaKey) {
         event.preventDefault();
         zoomAtPoint(event.clientX, event.clientY, scaleRef.current - event.deltaY * 0.0015);
         return;
@@ -211,7 +220,7 @@ export const TreeView = () => {
       viewport.removeEventListener('gesturestart', handleGestureStart as EventListener);
       viewport.removeEventListener('gesturechange', handleGestureChange as EventListener);
     };
-  }, [zoomAtPoint]);
+  }, [zoomAtPoint, mouseWheelZoom]);
 
   useEffect(() => {
     if (!isPanning) return;
@@ -342,14 +351,23 @@ export const TreeView = () => {
     const draggedId = activeId;
     // Record card position before restoring
     if (draggedId) {
-      const cardEl = viewportRef.current?.querySelector(`[data-task-id="${draggedId}"]`);
-      if (cardEl) {
-        const rect = cardEl.getBoundingClientRect();
+      const activeRect = event.active.rect.current.translated;
+      if (activeRect) {
         scrollCorrectionRef.current = {
           cardId: draggedId,
-          cardScreenX: rect.left,
-          cardScreenY: rect.top,
+          cardScreenX: activeRect.left,
+          cardScreenY: activeRect.top,
         };
+      } else {
+        const cardEl = viewportRef.current?.querySelector(`[data-task-id="${draggedId}"]`);
+        if (cardEl) {
+          const rect = cardEl.getBoundingClientRect();
+          scrollCorrectionRef.current = {
+            cardId: draggedId,
+            cardScreenX: rect.left,
+            cardScreenY: rect.top,
+          };
+        }
       }
     }
 
@@ -472,7 +490,7 @@ export const TreeView = () => {
               ))}
             </SortableContext>
             {typeof window !== 'undefined' && createPortal(
-              <DragOverlay zIndex={20} dropAnimation={null}>
+              <DragOverlay zIndex={20} dropAnimation={null} modifiers={[dragOverlayModifier]}>
                 {activeId ? (() => {
                   const activeTree = findNode(treeForest, activeId);
                   if (!activeTree) return null;

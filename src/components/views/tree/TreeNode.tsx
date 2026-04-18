@@ -22,7 +22,7 @@ interface TreeNodeProps {
 
 export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, isOnly = true, isOverlay = false, isSiblingDragging = false, canvasScale = 1, forcedCollapsedIds }: TreeNodeProps) => {
   const hasChildren = node.children && node.children.length > 0;
-  const isCollapsed = node.collapsed === 1 || (forcedCollapsedIds?.has(node.id.toString()) ?? false);
+  const isCollapsed = node.collapsed === 1 || (forcedCollapsedIds?.has(node.id.toString()) ?? false) || isOverlay;
   const { tasks, batchUpdatePositions } = useTaskStore();
 
   const sensors = useSensors(
