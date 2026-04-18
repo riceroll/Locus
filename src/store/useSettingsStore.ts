@@ -115,6 +115,8 @@ interface SavedSettings {
   showKanbanEstimate: boolean;
   showKanbanTimeSpent: boolean;
   showTotalTime: boolean;
+  mouseWheelZoom: boolean;
+  invertMouseWheelZoom: boolean;
 }
 
 interface SettingsState extends SavedSettings {
@@ -125,6 +127,8 @@ interface SettingsState extends SavedSettings {
   setShowKanbanEstimate: (show: boolean) => void;
   setShowKanbanTimeSpent: (show: boolean) => void;
     setShowTotalTime: (show: boolean) => void;
+  setMouseWheelZoom: (zoom: boolean) => void;
+  setInvertMouseWheelZoom: (invert: boolean) => void;
   initTheme: () => void;
 }
 
@@ -137,11 +141,14 @@ function loadSettings(): SavedSettings {
       appName: 'Locus',
       language: 'en',
       showKanbanEstimate: true,
-      showKanbanTimeSpent: true, showTotalTime: false,
+      showKanbanTimeSpent: true, 
+      showTotalTime: false,
+      mouseWheelZoom: false,
+      invertMouseWheelZoom: false,
       ...JSON.parse(raw),
     };
   } catch { /* ignore */ }
-  return { theme: 'system', accentColor: 'teal', appName: 'Locus', language: 'en', showKanbanEstimate: true, showKanbanTimeSpent: true, showTotalTime: false };
+  return { theme: 'system', accentColor: 'teal', appName: 'Locus', language: 'en', showKanbanEstimate: true, showKanbanTimeSpent: true, showTotalTime: false, mouseWheelZoom: false, invertMouseWheelZoom: false };
 }
 
 function save(s: SavedSettings) {
@@ -187,47 +194,59 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     },
 
     setTheme: (theme) => {
-      const { accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ theme });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
       applyTheme(theme);
     },
 
     setAccentColor: (accentColor) => {
-      const { theme, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ accentColor });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
       applyAccentColor(accentColor);
     },
 
     setAppName: (appName) => {
-      const { theme, accentColor, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ appName });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
     },
 
     setLanguage: (language) => {
-      const { theme, accentColor, appName, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ language });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
     },
 
     setShowKanbanEstimate: (showKanbanEstimate) => {
-      const { theme, accentColor, appName, language, showKanbanTimeSpent, showTotalTime } = get();
       set({ showKanbanEstimate });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
     },
 
     setShowKanbanTimeSpent: (showKanbanTimeSpent) => {
-      const { theme, accentColor, appName, language, showKanbanEstimate, showTotalTime } = get();
       set({ showKanbanTimeSpent });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
     },
 
     setShowTotalTime: (showTotalTime) => {
-      const { theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent } = get();
       set({ showTotalTime });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
+    },
+
+    setMouseWheelZoom: (mouseWheelZoom) => {
+      set({ mouseWheelZoom });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
+    },
+
+    setInvertMouseWheelZoom: (invertMouseWheelZoom) => {
+      set({ invertMouseWheelZoom });
+      const state = get();
+      save({ theme: state.theme, accentColor: state.accentColor, appName: state.appName, language: state.language, showKanbanEstimate: state.showKanbanEstimate, showKanbanTimeSpent: state.showKanbanTimeSpent, showTotalTime: state.showTotalTime, mouseWheelZoom: state.mouseWheelZoom, invertMouseWheelZoom: state.invertMouseWheelZoom });
     },
   };
 });

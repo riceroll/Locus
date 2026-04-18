@@ -30,6 +30,10 @@ const en = {
   kanban_card_display: 'Kanban Cards',
   show_estimate_time: 'Show estimate time',
   show_time_spent: 'Show time spent',
+  mouse_wheel_zoom: 'Mouse wheel zooms',
+  mouse_wheel_zoom_desc: 'If enabled, mouse wheel only zooms in the tree view instead of scrolling.',
+  invert_mouse_wheel_zoom: 'Invert wheel zoom direction',
+  invert_mouse_wheel_zoom_desc: 'Flip the scroll direction used for zooming in and out with the mouse wheel.',
 
   // Sidebar / nav
   nav_all_tasks: 'All Tasks',
@@ -247,6 +251,10 @@ const zh: Record<keyof typeof en, string> = {
   kanban_card_display: '看板卡片',
   show_estimate_time: '显示估时',
   show_time_spent: '显示已用时间',
+  mouse_wheel_zoom: '鼠标滚轮缩放',
+  mouse_wheel_zoom_desc: '开启后树状图鼠标滚轮仅为缩放功能（禁用上下滚动）。',
+  invert_mouse_wheel_zoom: '反转滚轮缩放方向',
+  invert_mouse_wheel_zoom_desc: '反转鼠标滚轮放大/缩小的方向。',
 
   nav_all_tasks: '所有任务',
   nav_projects: '项目',

@@ -15,6 +15,8 @@ export const SettingsModal = ({ onClose }: Props) => {
     showKanbanEstimate,
     showKanbanTimeSpent,
     showTotalTime,
+    mouseWheelZoom,
+    invertMouseWheelZoom,
     setTheme,
     setAccentColor,
     setAppName,
@@ -22,6 +24,8 @@ export const SettingsModal = ({ onClose }: Props) => {
     setShowKanbanEstimate,
     setShowKanbanTimeSpent,
     setShowTotalTime,
+    setMouseWheelZoom,
+    setInvertMouseWheelZoom,
   } = useSettingsStore();
 
   const THEME_OPTIONS: { value: ThemeMode; label: string; Icon: React.FC<{ className?: string }> }[] = [
@@ -158,7 +162,7 @@ export const SettingsModal = ({ onClose }: Props) => {
               {/* Task Tree Settings */}
               <div className="mt-4">
                 <label className="text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-2 block">{t(language, 'section_tasks')}</label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
                   <button
                     type="button"
                     onClick={() => setShowTotalTime(!showTotalTime)}
@@ -172,6 +176,36 @@ export const SettingsModal = ({ onClose }: Props) => {
                       <span className="h-4 w-4 rounded-full bg-white" />
                     </span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMouseWheelZoom(!mouseWheelZoom)}
+                    className="flex w-full items-center justify-between py-2 text-sm text-left hover:bg-neutral-50 dark:hover:bg-neutral-700/50 rounded-lg transition-colors px-2 -mx-2"
+                  >
+                    <div>
+                      <div className="text-neutral-700 dark:text-neutral-200">{t(language, 'mouse_wheel_zoom')}</div>
+                      <div className="text-xs text-neutral-500 mt-1 max-w-[280px]">{t(language, 'mouse_wheel_zoom_desc')}</div>
+                    </div>
+                    <span className={`inline-flex h-5 w-9 rounded-full transition ${mouseWheelZoom ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
+                      <span className="h-4 w-4 rounded-full bg-white" />
+                    </span>
+                  </button>
+
+                  {mouseWheelZoom && (
+                    <button
+                      type="button"
+                      onClick={() => setInvertMouseWheelZoom(!invertMouseWheelZoom)}
+                      className="flex w-full items-center justify-between py-2 text-sm text-left hover:bg-neutral-50 dark:hover:bg-neutral-700/50 rounded-lg transition-colors px-2 -mx-2 border-l-2 border-slate-200 dark:border-neutral-600 pl-4"
+                    >
+                      <div>
+                        <div className="text-neutral-700 dark:text-neutral-200">{t(language, 'invert_mouse_wheel_zoom')}</div>
+                        <div className="text-xs text-neutral-500 mt-1 max-w-[280px]">{t(language, 'invert_mouse_wheel_zoom_desc')}</div>
+                      </div>
+                      <span className={`inline-flex h-5 w-9 rounded-full transition ${invertMouseWheelZoom ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
+                        <span className="h-4 w-4 rounded-full bg-white" />
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 

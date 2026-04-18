@@ -42,7 +42,7 @@ type WebKitGestureEvent = Event & {
 };
 
 export const TreeView = () => {
-  const { mouseWheelZoom } = useSettingsStore();
+  const { mouseWheelZoom, invertMouseWheelZoom } = useSettingsStore();
 
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -174,7 +174,8 @@ export const TreeView = () => {
       // Zoom with Cmd/Ctrl
       if (mouseWheelZoom || event.ctrlKey || event.metaKey) {
         event.preventDefault();
-        zoomAtPoint(event.clientX, event.clientY, scaleRef.current - event.deltaY * 0.0015);
+        const factor = invertMouseWheelZoom ? 1 : -1;
+        zoomAtPoint(event.clientX, event.clientY, scaleRef.current + event.deltaY * 0.0015 * factor);
         return;
       }
       
@@ -220,7 +221,7 @@ export const TreeView = () => {
       viewport.removeEventListener('gesturestart', handleGestureStart as EventListener);
       viewport.removeEventListener('gesturechange', handleGestureChange as EventListener);
     };
-  }, [zoomAtPoint, mouseWheelZoom]);
+  }, [zoomAtPoint, mouseWheelZoom, invertMouseWheelZoom]);
 
   useEffect(() => {
     if (!isPanning) return;
