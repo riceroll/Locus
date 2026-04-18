@@ -14,12 +14,14 @@ export const SettingsModal = ({ onClose }: Props) => {
     language,
     showKanbanEstimate,
     showKanbanTimeSpent,
+    showTotalTime,
     setTheme,
     setAccentColor,
     setAppName,
     setLanguage,
     setShowKanbanEstimate,
     setShowKanbanTimeSpent,
+    setShowTotalTime,
   } = useSettingsStore();
 
   const THEME_OPTIONS: { value: ThemeMode; label: string; Icon: React.FC<{ className?: string }> }[] = [
@@ -36,18 +38,18 @@ export const SettingsModal = ({ onClose }: Props) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
-        className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl dark:shadow-neutral-900/60 w-[400px] max-w-[95vw] overflow-hidden"
+        className="bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl dark:shadow-neutral-900/60 w-[400px] max-w-[95vw] overflow-hidden flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-700">
+        <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-neutral-700">
           <h2 className="text-base font-semibold text-neutral-800 dark:text-neutral-200">{t(language, 'settings')}</h2>
           <button type="button" onClick={onClose} className="btn-ghost">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-6">
+        <div className="px-6 py-5 space-y-6 overflow-y-auto flex-1">
           {/* ── Appearance ──────────────────────── */}
           <section>
             <h3 className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-3">{t(language, 'appearance')}</h3>
@@ -152,6 +154,27 @@ export const SettingsModal = ({ onClose }: Props) => {
                 </button>
               </div>
             </div>
+
+              {/* Task Tree Settings */}
+              <div className="mt-4">
+                <label className="text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-2 block">{t(language, 'section_tasks')}</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTotalTime(!showTotalTime)}
+                    className="flex w-full items-center justify-between py-2 text-sm text-left hover:bg-neutral-50 dark:hover:bg-neutral-700/50 rounded-lg transition-colors px-2 -mx-2"
+                  >
+                    <div>
+                      <div className="text-neutral-700 dark:text-neutral-200">{t(language, 'section_tasks')}</div>
+                      <div className="text-xs text-neutral-500 mt-1 max-w-[280px]">{t(language, 'show_total_time_desc')}</div>
+                    </div>
+                    <span className={`inline-flex h-5 w-9 rounded-full transition ${showTotalTime ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
+                      <span className="h-4 w-4 rounded-full bg-white" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+
 
             {/* Language */}
             <div className="mt-4">

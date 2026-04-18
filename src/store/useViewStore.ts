@@ -84,7 +84,7 @@ export interface ViewFilters {
 export interface SavedView {
   id: string;
   name: string;
-  view_type: 'list' | 'kanban' | 'calendar';
+  view_type: 'list' | 'kanban' | 'calendar' | 'tree';
   position: number;
   color: string | null;
   filters: ViewFilters;
@@ -97,19 +97,19 @@ export interface SavedView {
 interface ViewState {
   views: SavedView[];
   activeViewId: string | null; // null = "All Tasks" default
-  activeViewType: 'list' | 'kanban' | 'calendar';
+  activeViewType: 'list' | 'kanban' | 'calendar' | 'tree';
   activeFilters: ViewFilters;
   activePage: 'tasks' | 'projects';
   fetchViews: () => Promise<void>;
-  createView: (name: string, viewType: 'list' | 'kanban' | 'calendar', filters?: ViewFilters) => Promise<void>;
+  createView: (name: string, viewType: 'list' | 'kanban' | 'calendar' | 'tree', filters?: ViewFilters) => Promise<void>;
   updateView: (id: string, filters: ViewFilters) => Promise<void>;
-  changeViewType: (id: string, viewType: 'list' | 'kanban' | 'calendar') => Promise<void>;
+  changeViewType: (id: string, viewType: 'list' | 'kanban' | 'calendar' | 'tree') => Promise<void>;
   setViewColor: (id: string, color: string | null) => Promise<void>;
   reorderViews: (orderedIds: string[]) => Promise<void>;
   deleteView: (id: string) => Promise<void>;
   renameView: (id: string, name: string) => Promise<void>;
   selectView: (id: string | null) => void;
-  setViewType: (type: 'list' | 'kanban' | 'calendar') => void;
+  setViewType: (type: 'list' | 'kanban' | 'calendar' | 'tree') => void;
   setFilters: (filters: ViewFilters) => void;
   setActivePage: (page: 'tasks' | 'projects') => void;
 }

@@ -20,7 +20,7 @@ export const NowIndicator = ({ dayStart, hourHeight }: Props) => {
   return (
     <div
       className="absolute left-0 right-0 z-20 pointer-events-none"
-      style={{ top }}
+      style={{ top, transform: 'translateY(-50%)' }}
     >
       <div className="flex items-center">
         <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 -ml-1 relative z-10" />

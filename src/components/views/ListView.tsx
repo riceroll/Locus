@@ -12,7 +12,7 @@ import {
 import { applyTaskFilters } from '../../lib/taskFilters';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useStatusStore } from '../../store/useStatusStore';
-import { useTaskStore, type Task } from '../../store/useTaskStore';
+import { useTaskStore, type Task, collectDescendantIds } from '../../store/useTaskStore';
 import { useTimerStore } from '../../store/useTimerStore';
 import { useViewStore } from '../../store/useViewStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -28,7 +28,7 @@ export const ListView = () => {
   const { tasks, isLoading, error, fetchTasks, addTask, addNextTask, updateTaskStatus, toggleCollapsed, deleteTask, deleteTaskRecursive, moveTask, batchUpdatePositions } = useTaskStore();
   const { isRunning, activeTaskId, elapsed, getAllEntries, startTimer, stopTimer } = useTimerStore();
   const { activeFilters, setFilters } = useViewStore();
-  const { language } = useSettingsStore();
+  const { language, showTotalTime } = useSettingsStore();
   const { statuses, fetchStatuses, getDoneStatusId, getDefaultOpenStatusId } = useStatusStore();
   const { projects, fetchProjects } = useProjectStore();
 
@@ -202,8 +202,14 @@ export const ListView = () => {
   }, [getAllEntries, isRunning, elapsed]);
 
   const getTaskTotalTime = (taskId: string) => {
-    const saved = taskTimeTotals[taskId] ?? 0;
-    return isRunning && activeTaskId === taskId ? saved + elapsed : saved;
+    let total = 0;
+    const idsToCompute = showTotalTime ? [taskId, ...collectDescendantIds(taskId, tasks)] : [taskId];
+    for (const id of idsToCompute) {
+      const saved = taskTimeTotals[id] ?? 0;
+      total += saved;
+      if (isRunning && activeTaskId === id) total += elapsed;
+    }
+    return total;
   };
 
   const doneStatusId = getDoneStatusId();

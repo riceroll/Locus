@@ -25,6 +25,8 @@ const en = {
   app_name_placeholder: 'Locus',
   app_name_hint: 'Shown in the sidebar header.',
   language: 'Language',
+  section_tasks: 'Tasks',
+  show_total_time_desc: 'Show total estimated and tracked time in tasks list.',
   kanban_card_display: 'Kanban Cards',
   show_estimate_time: 'Show estimate time',
   show_time_spent: 'Show time spent',
@@ -111,6 +113,8 @@ const en = {
   btn_hidden: 'Hidden',
   btn_show_children: 'Show all subtasks',
   btn_hide_children: 'Hide all subtasks',
+  btn_expand: 'Expand',
+  tooltip_minimize: 'Minimize',
   label_description: 'Description',
   placeholder_description: 'Add a description…',
   section_subtasks: 'Subtasks',
@@ -212,6 +216,7 @@ const en = {
   tab_view_list: 'list',
   tab_view_kanban: 'kanban',
   tab_view_calendar: 'calendar',
+  tab_view_tree: 'tree',
 } as const;
 
 const zh: Record<keyof typeof en, string> = {
@@ -237,6 +242,8 @@ const zh: Record<keyof typeof en, string> = {
   app_name_placeholder: 'Locus',
   app_name_hint: '显示在侧边栏顶部。',
   language: '语言',
+  section_tasks: '任务',
+  show_total_time_desc: '在任务列表中显示总预估和已用时间。',
   kanban_card_display: '看板卡片',
   show_estimate_time: '显示估时',
   show_time_spent: '显示已用时间',
@@ -317,6 +324,8 @@ const zh: Record<keyof typeof en, string> = {
   btn_hidden: '隐藏',
   btn_show_children: '显示所有子任务',
   btn_hide_children: '隐藏所有子任务',
+  btn_expand: '展开',
+  tooltip_minimize: '最小化',
   label_description: '描述',
   placeholder_description: '添加描述…',
   section_subtasks: '子任务',
@@ -413,6 +422,7 @@ const zh: Record<keyof typeof en, string> = {
   tab_view_list: '列表',
   tab_view_kanban: '看板',
   tab_view_calendar: '日历',
+  tab_view_tree: '树状图',
 };
 
 export type TranslationKey = keyof typeof en;

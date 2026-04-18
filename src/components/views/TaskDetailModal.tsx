@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plus, ChevronRight, ChevronDown, Clock, ExternalLink, Trash2, Calendar, Play, Square, Eye, EyeOff, Check } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { X, Plus, ChevronRight, ChevronDown, Clock, ExternalLink, Trash2, Calendar, Maximize2, Minimize2, Play, Square, Eye, EyeOff, Check } from 'lucide-react';
 import {
   DndContext,
   PointerSensor,
@@ -14,7 +15,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useTaskStore, type Task } from '../../store/useTaskStore';
+import { useTaskStore, type Task, collectDescendantIds } from '../../store/useTaskStore';
 import { useStatusStore } from '../../store/useStatusStore';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useTimerStore, type TimeEntry, formatDuration } from '../../store/useTimerStore';
@@ -34,6 +35,8 @@ const PRIORITIES = [
 /* ─── Draggable subtask card (Kanban-style) ─────────────────────── */
 const SortableSubtaskCard = ({
   sub,
+    subTimeSec,
+
   statuses,
   language,
   onOpenSub,
@@ -41,6 +44,7 @@ const SortableSubtaskCard = ({
   onToggleVisible,
 }: {
   sub: Task;
+  subTimeSec: number;
   statuses: { id: string; name: string; is_done: number | boolean; color?: string | null }[];
   language: 'en' | 'zh';
   onOpenSub: (id: string) => void;
@@ -123,6 +127,12 @@ const SortableSubtaskCard = ({
           options={statuses.map((s) => ({ value: s.id, label: s.name, color: s.color || '#94a3b8' }))}
           onChange={async (val) => { if (val) await useTaskStore.getState().updateTask(sub.id, { status_id: val }); }}
         />
+          {subTimeSec > 0 && (
+            <span className="flex items-center gap-1 ml-auto text-xs font-mono text-neutral-400 dark:text-neutral-500">
+              <Clock className="w-3 h-3" />
+              {formatDuration(subTimeSec)}
+            </span>
+          )}
         {subPriority && (
           <span className="text-[11px] font-bold ml-auto pointer-events-none" style={{ color: subPriority.color }}>!</span>
         )}
@@ -141,8 +151,8 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
   const { tasks, updateTask, updateTaskProject, addTask, deleteTask, deleteTaskRecursive, toggleVisible, setChildrenVisibility, batchUpdatePositions } = useTaskStore();
   const { statuses } = useStatusStore();
   const { projects } = useProjectStore();
-  const { getEntriesForTask, addManualEntry, deleteEntry, isRunning, activeTaskId, startTimer, stopTimer } = useTimerStore();
-  const { language } = useSettingsStore();
+  const { getAllEntries, getEntriesForTask, addManualEntry, deleteEntry, isRunning, activeTaskId, startTimer, stopTimer, elapsed } = useTimerStore();
+  const { language, showTotalTime } = useSettingsStore();
 
   const task = tasks.find((t) => t.id === currentTaskId);
   const subtasks = tasks
@@ -152,11 +162,41 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const [title, setTitle] = useState(task?.title ?? '');
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
   const [description, setDescription] = useState(task?.description ?? '');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
   const [subtasksExpanded, setSubtasksExpanded] = useState(true);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+    const [taskTimeTotals, setTaskTimeTotals] = useState<Record<string, number>>({});
+
+    useEffect(() => {
+      const loadTimeTotals = async () => {
+        const entries = await getAllEntries();
+        const totals: Record<string, number> = {};
+        for (const e of entries) {
+           totals[e.task_id] = (totals[e.task_id] ?? 0) + (e.duration ?? 0);
+        }
+        setTaskTimeTotals(totals);
+      };
+      void loadTimeTotals();
+      const handle = () => { void loadTimeTotals(); };
+      window.addEventListener('time-entries-changed', handle);
+      return () => window.removeEventListener('time-entries-changed', handle);
+    }, [getAllEntries, isRunning, elapsed]);
+
+    const getTaskTotalTime = (taskId: string) => {
+      let total = 0;
+      const idsToCompute = showTotalTime ? [taskId, ...collectDescendantIds(taskId, tasks)] : [taskId];
+      for (const id of idsToCompute) {
+        const saved = taskTimeTotals[id] ?? 0;
+        total += saved;
+        if (isRunning && activeTaskId === id) total += elapsed;
+      }
+      return total;
+    };
+
   const [timeEntriesExpanded, setTimeEntriesExpanded] = useState(true);
   const [manualDurationMin, setManualDurationMin] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
@@ -217,7 +257,7 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
     return st && Number(st.is_done);
   }).length;
 
-  const totalTimeSec = timeEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0);
+    const totalTimeSec = showTotalTime ? getTaskTotalTime(currentTaskId) : timeEntries.reduce((acc, e) => acc + (e.duration ?? 0), 0);
 
   const handleDeleteEntry = async (id: string) => {
     await deleteEntry(id);
@@ -238,9 +278,10 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
   void priorityInfo; // still used in subtask rows via PRIORITIES lookup above
 
   // (old modal return removed)
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-2xl dark:shadow-neutral-900/50 w-[520px] max-w-full max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div className={`bg-white dark:bg-neutral-800 shadow-2xl dark:shadow-neutral-900/50 flex flex-col overflow-hidden transition-all duration-200 ${isFullscreen ? 'w-screen h-screen rounded-none' : 'w-[520px] max-w-full max-h-[90vh] rounded-xl'}`} onClick={(e) => e.stopPropagation()}>
+
         {/* Header */}
         <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 dark:border-neutral-700">
           <button
@@ -297,6 +338,15 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
             }}
           >
             {running ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            </button>
+            <button
+              type="button"
+              className="ml-1 btn-ghost"
+              title={isFullscreen ? t(language, 'tooltip_minimize') : t(language, 'btn_expand')}
+              onClick={() => setIsFullscreen(!isFullscreen)}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+
           </button>
         </div>
 
@@ -462,6 +512,7 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
                   <SortableContext items={subtasks.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                     {subtasks.map((sub) => (
                       <SortableSubtaskCard
+                        subTimeSec={getTaskTotalTime(sub.id)}
                         key={sub.id}
                         sub={sub}
                         statuses={statuses}
@@ -670,6 +721,7 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

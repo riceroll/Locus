@@ -27,7 +27,7 @@ export const SortableColumnWrapper = ({
     data: { type: 'column' },
   });
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: draggingColumn && isDragging ? undefined : CSS.Translate.toString(transform),
     transition: isDragging ? 'none' : undefined,
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 50 : undefined,

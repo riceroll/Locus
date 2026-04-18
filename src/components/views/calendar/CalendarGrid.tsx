@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { getDb } from '../../../db';
 import { useTimerStore } from '../../../store/useTimerStore';
+import { useTaskStore } from '../../../store/useTaskStore';
 import { CalendarHeader } from './CalendarHeader';
 import { DayColumn } from './DayColumn';
 import { TimeGutter } from './TimeGutter';
@@ -93,6 +94,7 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { isRunning, activeTaskId, activeTaskTitle, activeEntryId, startTime, updateEntry } = useTimerStore();
+  const { tasks } = useTaskStore();
 
   const days = useMemo(() => getDaysForView(currentDate, viewMode), [currentDate, viewMode]);
 
@@ -408,8 +410,16 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
           : e,
       );
     }
-    return result;
-  }, [entries, drag, resize]);
+    
+    // Fallback to instantly override task properties without full DB fetch
+    return result.map(e => {
+      const t = tasks.find(t => t.id === e.taskId);
+      if (t) {
+        return { ...e, taskTitle: t.title };
+      }
+      return e;
+    });
+  }, [entries, drag, resize, tasks]);
 
   const displayEntriesForDay = useCallback(
     (day: Date) => {

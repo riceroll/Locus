@@ -31,12 +31,14 @@ import {
   MoreHorizontal,
   Trash2,
   Pencil,
+  Network
 } from 'lucide-react';
 
 const VIEW_ICONS = {
   list: LayoutList,
   kanban: Columns3,
   calendar: Calendar,
+  tree: Network,
 } as const;
 
 const VIEW_COLOR_PRESETS = [
@@ -172,12 +174,12 @@ const SortableViewRow = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-3 py-1 text-[11px] font-semibold text-slate-400 dark:text-neutral-500 uppercase tracking-wider">{t(language, 'section_views')}</div>
-            {(['list', 'kanban', 'calendar'] as const).map(vt => {
+            {(['list', 'kanban', 'calendar', 'tree'] as const).map(vt => {
               const TIcon = VIEW_ICONS[vt];
               return (
                 <button
                   key={vt}
-                  onClick={() => { onChangeType(view.id, vt); onCloseMenu(); }}
+                  onClick={() => { onChangeType(view.id, vt as any); onCloseMenu(); }}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 text-sm capitalize transition ${
                     view.view_type === vt
                       ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30'
@@ -241,7 +243,7 @@ export const Sidebar = ({ onOpenSettings }: { onOpenSettings?: () => void }) => 
   const [expanded, setExpanded] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState<'list' | 'kanban' | 'calendar'>('list');
+  const [newType, setNewType] = useState<'list' | 'kanban' | 'calendar' | 'tree'>('list');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editingViewId, setEditingViewId] = useState<string | null>(null);
   const [editingViewName, setEditingViewName] = useState('');
@@ -391,7 +393,7 @@ export const Sidebar = ({ onOpenSettings }: { onOpenSettings?: () => void }) => 
                   className="w-full text-sm border border-neutral-300 dark:border-neutral-600 rounded px-2 py-1.5 bg-white dark:bg-neutral-700 dark:text-neutral-200 focus:ring-1 focus:ring-brand-300 outline-none"
                 />
                 <div className="flex gap-1">
-                  {(['list', 'kanban', 'calendar'] as const).map(t => {
+                  {(['list', 'kanban', 'calendar', 'tree'] as const).map(t => {
                     const Icon = VIEW_ICONS[t];
                     return (
                       <button

@@ -118,7 +118,7 @@ export const KanbanView = () => {
   const { tasks, fetchTasks, addTask, batchUpdatePositions, moveTaskToColumn } = useTaskStore();
   const { getAllEntries, isRunning, activeTaskId, elapsed } = useTimerStore();
   const { activeFilters, setFilters } = useViewStore();
-  const { language } = useSettingsStore();
+  const { language, showTotalTime } = useSettingsStore();
   const {
     statuses,
     fetchStatuses,
@@ -201,9 +201,14 @@ export const KanbanView = () => {
   }, [getAllEntries, isRunning, elapsed]);
 
   const getTaskTotalTime = (taskId: string) => {
-    const saved = taskTimeTotals[taskId] ?? 0;
-    if (isRunning && activeTaskId === taskId) return saved + elapsed;
-    return saved;
+    let total = 0;
+    const idsToCompute = showTotalTime ? [taskId, ...collectDescendantIds(taskId, tasks)] : [taskId];
+    for (const id of idsToCompute) {
+      const saved = taskTimeTotals[id] ?? 0;
+      total += saved;
+      if (isRunning && activeTaskId === id) total += elapsed;
+    }
+    return total;
   };
 
   const sensors = useSensors(
@@ -600,7 +605,7 @@ export const KanbanView = () => {
           {activeTask ? <SortableTaskCard task={activeTask} isOverlay /> : null}
           {activeColumn ? (
             <div
-              className="w-80 h-20 rounded-lg border-2 bg-white/90 dark:bg-neutral-800/90 shadow-xl dark:shadow-neutral-900/20 flex items-center justify-center gap-2 rotate-1"
+              className="w-80 h-20 rounded-lg border-2 bg-white/90 dark:bg-neutral-800/90 shadow-xl dark:shadow-neutral-900/20 flex items-center justify-center gap-2"
               style={{ borderColor: activeColumn.color }}
             >
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: activeColumn.color }} />

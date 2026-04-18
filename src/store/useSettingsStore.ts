@@ -114,6 +114,7 @@ interface SavedSettings {
   language: Language;
   showKanbanEstimate: boolean;
   showKanbanTimeSpent: boolean;
+  showTotalTime: boolean;
 }
 
 interface SettingsState extends SavedSettings {
@@ -123,6 +124,7 @@ interface SettingsState extends SavedSettings {
   setLanguage: (lang: Language) => void;
   setShowKanbanEstimate: (show: boolean) => void;
   setShowKanbanTimeSpent: (show: boolean) => void;
+    setShowTotalTime: (show: boolean) => void;
   initTheme: () => void;
 }
 
@@ -135,11 +137,11 @@ function loadSettings(): SavedSettings {
       appName: 'Locus',
       language: 'en',
       showKanbanEstimate: true,
-      showKanbanTimeSpent: true,
+      showKanbanTimeSpent: true, showTotalTime: false,
       ...JSON.parse(raw),
     };
   } catch { /* ignore */ }
-  return { theme: 'system', accentColor: 'teal', appName: 'Locus', language: 'en', showKanbanEstimate: true, showKanbanTimeSpent: true };
+  return { theme: 'system', accentColor: 'teal', appName: 'Locus', language: 'en', showKanbanEstimate: true, showKanbanTimeSpent: true, showTotalTime: false };
 }
 
 function save(s: SavedSettings) {
@@ -185,41 +187,47 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     },
 
     setTheme: (theme) => {
-      const { accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent } = get();
+      const { accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ theme });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent });
+      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
       applyTheme(theme);
     },
 
     setAccentColor: (accentColor) => {
-      const { theme, appName, language, showKanbanEstimate, showKanbanTimeSpent } = get();
+      const { theme, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ accentColor });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent });
+      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
       applyAccentColor(accentColor);
     },
 
     setAppName: (appName) => {
-      const { theme, accentColor, language, showKanbanEstimate, showKanbanTimeSpent } = get();
+      const { theme, accentColor, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ appName });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent });
+      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
     },
 
     setLanguage: (language) => {
-      const { theme, accentColor, appName, showKanbanEstimate, showKanbanTimeSpent } = get();
+      const { theme, accentColor, appName, showKanbanEstimate, showKanbanTimeSpent, showTotalTime } = get();
       set({ language });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent });
+      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
     },
 
     setShowKanbanEstimate: (showKanbanEstimate) => {
-      const { theme, accentColor, appName, language, showKanbanTimeSpent } = get();
+      const { theme, accentColor, appName, language, showKanbanTimeSpent, showTotalTime } = get();
       set({ showKanbanEstimate });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent });
+      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
     },
 
     setShowKanbanTimeSpent: (showKanbanTimeSpent) => {
-      const { theme, accentColor, appName, language, showKanbanEstimate } = get();
+      const { theme, accentColor, appName, language, showKanbanEstimate, showTotalTime } = get();
       set({ showKanbanTimeSpent });
-      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent });
+      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
+    },
+
+    setShowTotalTime: (showTotalTime) => {
+      const { theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent } = get();
+      set({ showTotalTime });
+      save({ theme, accentColor, appName, language, showKanbanEstimate, showKanbanTimeSpent, showTotalTime });
     },
   };
 });

@@ -6,6 +6,7 @@ import { useStatusStore } from '../../store/useStatusStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { t } from '../../i18n';
 import { Square, Search, Briefcase, Plus } from 'lucide-react';
+import { TaskDetailModal } from '../views/TaskDetailModal';
 
 // Score a task for suggestion ranking given a query string
 function scoreTask(task: { title: string; updated_at: number; status_id: string }, query: string, doneStatusIds: Set<string>): number {
@@ -34,6 +35,7 @@ export const TimerBar = () => {
   const { language } = useSettingsStore();
 
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) : null;
+  const [showTaskDetail, setShowTaskDetail] = useState(false);
 
   // Active timer title editing
   const [draftTitle, setDraftTitle] = useState('');
@@ -146,10 +148,14 @@ export const TimerBar = () => {
 
       <div className="relative z-10 flex items-center gap-3.5 min-w-0 flex-1">
         {isRunning ? (
-          <div className="relative flex items-center justify-center w-3.5 h-3.5 shrink-0 ml-1">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-brand-500 opacity-50 animate-ambient-ping" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-500 shadow-[0_0_8px_rgb(var(--brand-500)/1)]" />
-          </div>
+          <button 
+            type="button"
+            onClick={() => setShowTaskDetail(true)}
+            className="relative flex items-center justify-center w-5 h-5 shrink-0 transition-transform hover:scale-110 active:scale-95 group/ping"
+          >
+            <span className="absolute inline-flex h-3.5 w-3.5 rounded-full bg-brand-500 opacity-50 animate-ambient-ping group-hover:opacity-70" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-500 shadow-[0_0_8px_rgb(var(--brand-500)/1)] group-hover:shadow-[0_0_12px_rgb(var(--brand-500)/1)]" />
+          </button>
         ) : (
           <Search className="w-4 h-4 text-neutral-400 shrink-0 ml-1" />
         )}
@@ -283,6 +289,13 @@ export const TimerBar = () => {
           </button>
         </div>
       </div>
+
+      {showTaskDetail && activeTaskId && (
+        <TaskDetailModal 
+          taskId={activeTaskId} 
+          onClose={() => setShowTaskDetail(false)} 
+        />
+      )}
     </div>
   );
 };

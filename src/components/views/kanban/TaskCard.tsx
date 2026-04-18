@@ -44,6 +44,7 @@ export const SortableTaskCard = ({
     attributes,
     listeners,
     transform,
+    transition,
     isDragging,
     isOver,
   } = useSortable({
@@ -70,14 +71,14 @@ export const SortableTaskCard = ({
   const isDone = doneStatus ? task.status_id === doneStatus.id : false;
 
   const style = {
-    transform: CSS.Translate.toString(transform),
-    transition: 'none',
+    transform: isOverlay ? undefined : (isDragging ? undefined : CSS.Translate.toString(transform)),
+    transition: isOverlay ? undefined : (isDragging ? 'none' : transition),
     opacity: isDragging ? 0 : 1,
   };
 
   if (isOverlay) {
     return (
-      <div className="bg-white dark:bg-neutral-800 rounded-lg border-2 border-brand-400 shadow-xl dark:shadow-neutral-900/20 p-3 w-[272px] rotate-1">
+      <div className="bg-white dark:bg-neutral-800 rounded-lg border-2 border-brand-400 shadow-xl dark:shadow-neutral-900/20 p-3 w-[272px]">
         <p className="text-sm font-medium text-slate-800 dark:text-neutral-200">{task.title}</p>
         {project && (
           <span
