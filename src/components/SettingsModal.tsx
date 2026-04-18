@@ -195,7 +195,7 @@ export const SettingsModal = ({ onClose }: Props) => {
                     <button
                       type="button"
                       onClick={() => setInvertMouseWheelZoom(!invertMouseWheelZoom)}
-                      className="flex w-full items-center justify-between py-2 text-sm text-left hover:bg-neutral-50 dark:hover:bg-neutral-700/50 rounded-lg transition-colors px-2 -mx-2 border-l-2 border-slate-200 dark:border-neutral-600 pl-4"
+                      className="flex w-full items-center justify-between py-2 text-sm text-left hover:bg-neutral-50 dark:hover:bg-neutral-700/50 rounded-lg transition-colors px-2 -mx-2"
                     >
                       <div>
                         <div className="text-neutral-700 dark:text-neutral-200">{t(language, 'invert_mouse_wheel_zoom')}</div>
