@@ -1,7 +1,7 @@
 import { type Task } from '../../../store/useTaskStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useStatusStore } from '../../../store/useStatusStore';
-import { ChevronRight, AlertCircle, Calendar, Plus } from 'lucide-react';
+import { ChevronRight, AlertCircle, Calendar, Plus, Check } from 'lucide-react';
 import { useTaskStore } from '../../../store/useTaskStore';
 
 function format(date: Date, _fmt: string) { return date.toLocaleDateString(); }
@@ -17,11 +17,12 @@ interface TreeCardProps {
 export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragListeners }: TreeCardProps) => {
   const { projects } = useProjectStore();
   const { statuses } = useStatusStore();
-  const { updateTask, addTask } = useTaskStore();
+  const { updateTask, addTask, updateTaskStatus } = useTaskStore();
 
   const project = projects.find(p => p.id === task.project_id);
   const status = statuses.find(s => s.id === task.status_id);
   const color = project?.color || '#94a3b8';
+  const doneStatus = statuses.find((s) => Number(s.is_done) === 1);
   const isDone = status?.is_done === 1;
 
   const toggleCollapse = () => {
@@ -48,14 +49,37 @@ export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragL
       style={{ zIndex: 10 }}
     >
       <div className="flex items-start gap-2">
-        <div 
-          className="w-3.5 h-3.5 mt-0.5 rounded-full shrink-0 border-[2px]"
-          style={{ borderColor: status?.color || color, backgroundColor: isDone ? status?.color || color : 'transparent' }}
-        />
+        <button
+          type="button"
+          className={`task-checkbox mt-0.5 ${isDone ? 'task-checkbox-on' : 'task-checkbox-off'}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (!doneStatus) return;
+            if (isDone) {
+              const defaultStatus =
+                statuses.find((s) => Number(s.is_default) === 1 && Number(s.is_done) !== 1) ||
+                statuses.find((s) => Number(s.is_done) !== 1);
+              if (defaultStatus) await updateTaskStatus(task.id, defaultStatus.id);
+            } else {
+              await updateTaskStatus(task.id, doneStatus.id);
+            }
+          }}
+        >
+          {isDone && <Check className="w-3 h-3" strokeWidth={3} />}
+        </button>
         <div className="flex-1 min-w-0">
-          <h3 className={`text-sm font-semibold truncate leading-tight ${isDone ? 'text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-100'}`}>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
+            }}
+            className={`text-sm font-semibold truncate leading-tight text-left hover:text-brand-600 hover:underline transition ${isDone ? 'text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-100'}`}
+          >
             {task.title}
-          </h3>
+          </button>
           
           <div className="flex items-center gap-2 mt-2 break-words">
             {project && (

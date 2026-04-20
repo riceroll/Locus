@@ -22,6 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 
 import { createPortal, flushSync } from 'react-dom';
+import { TaskDetailModal } from './TaskDetailModal';
 
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 2.4;
@@ -45,6 +46,16 @@ export const TreeView = () => {
   const { mouseWheelZoom, invertMouseWheelZoom } = useSettingsStore();
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleOpenDetail = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setActiveDetailId(customEvent.detail.taskId);
+    };
+    window.addEventListener('open-task-detail', handleOpenDetail);
+    return () => window.removeEventListener('open-task-detail', handleOpenDetail);
+  }, []);
 
   const dragOverlayModifier: Modifier = ({ transform }) => {
     return transform;
@@ -519,6 +530,9 @@ export const TreeView = () => {
           )}
         </div>
       </div>
+      {activeDetailId && (
+        <TaskDetailModal taskId={activeDetailId} onClose={() => setActiveDetailId(null)} />
+      )}
     </div>
   );
 };

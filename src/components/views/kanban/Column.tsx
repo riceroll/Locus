@@ -3,31 +3,8 @@ import { useDroppable } from '@dnd-kit/core';
 import { MoreHorizontal, Star, Palette, Trash2, ChevronRight } from 'lucide-react';
 import type { Task } from '../../../store/useTaskStore';
 import { useSettingsStore } from '../../../store/useSettingsStore';
+import { ColorPickerDropdown } from '../../ui/UnifiedColorPicker';
 import { t } from '../../../i18n';
-import { COLOR_PRESETS } from './kanbanUtils';
-
-/* ─── Color Picker ────────────────────────────────────────────── */
-const ColorPicker = ({
-  current,
-  onSelect,
-}: {
-  current: string;
-  onSelect: (color: string) => void;
-}) => (
-  <div className="grid grid-cols-7 gap-1.5 p-2">
-    {COLOR_PRESETS.map((c) => (
-      <button
-        key={c}
-        type="button"
-        onClick={() => onSelect(c)}
-        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-          c === current ? 'border-slate-800 dark:border-neutral-100 scale-110' : 'border-transparent'
-        }`}
-        style={{ backgroundColor: c }}
-      />
-    ))}
-  </div>
-);
 
 /* ─── Column header + body ────────────────────────────────────── */
 interface ColumnProps {
@@ -81,7 +58,7 @@ export const Column = ({
   const [isEditing, setIsEditing] = useState(false);
   const [draftName, setDraftName] = useState(name);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
+  
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -175,7 +152,7 @@ export const Column = ({
 
   return (
     <div
-      className="group flex flex-col shrink-0 relative rounded-xl border border-transparent hover:border-neutral-200/80 dark:hover:border-neutral-700 transition-colors"
+      className="group flex flex-col min-h-0 shrink-0 relative rounded-xl border border-transparent hover:border-neutral-200/80 dark:hover:border-neutral-700 transition-colors max-h-full"
       style={{ width: width ?? 320 }}
     >
       {/* Header — whole bar is draggable */}
@@ -248,19 +225,15 @@ export const Column = ({
           >
               <Star className="w-3.5 h-3.5 inline mr-1" /> {t(language, 'btn_set_as_default_column')}
           </button>
-          <button
-            type="button"
-            onClick={() => setShowColorPicker((v) => !v)}
-            className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-neutral-100 dark:hover:bg-neutral-700 dark:text-neutral-200"
-          >
-              <Palette className="w-3.5 h-3.5 inline mr-1" /> {t(language, 'btn_change_color')}
-          </button>
-          {showColorPicker && (
-            <ColorPicker
-              current={color}
-              onSelect={(c) => { void onChangeColor(id, c); setShowColorPicker(false); }}
-            />
-          )}
+          <div className="px-2 py-1.5 flex items-center justify-between">
+              <span className="text-xs text-neutral-700 dark:text-neutral-200">
+                <Palette className="w-3.5 h-3.5 inline mr-1" /> {t(language, 'btn_change_color')}
+              </span>
+              <ColorPickerDropdown
+                current={color}
+                onSelect={(c) => onChangeColor(id, c)}
+              />
+          </div>
           {!confirmingDelete ? (
             <button
               type="button"

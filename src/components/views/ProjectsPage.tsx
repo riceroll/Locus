@@ -24,11 +24,7 @@ import { t } from '../../i18n';
 import { IconPicker, type ProjectIcon } from '../ui/IconPicker';
 
 /* ─── Color presets ─────────────────────────────────────────────── */
-const COLOR_PRESETS = [
-  '#f87171', '#fb923c', '#fbbf24', '#4ade80', '#34d399', '#2dd4bf', '#22d3ee',
-  '#60a5fa', '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6', '#fb7185',
-  '#94a3b8', '#78716c', '#a3a3a3', '#6366f1', '#0ea5e9', '#10b981', '#f59e0b',
-];
+import { UnifiedColorPicker } from '../ui/UnifiedColorPicker';
 
 const ColorPicker = ({ anchorRef, current, onSelect }: { anchorRef: React.RefObject<HTMLButtonElement | null>; current: string | null; onSelect: (c: string) => void }) => {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -40,27 +36,12 @@ const ColorPicker = ({ anchorRef, current, onSelect }: { anchorRef: React.RefObj
   }, [anchorRef]);
   if (!pos) return null;
   return (
-    <div
-      className="fixed z-[9999] bg-white dark:bg-neutral-800 border border-slate-200 dark:border-neutral-700 rounded-lg shadow-lg p-2"
-      style={{ top: pos.top, left: pos.left }}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="grid grid-cols-7 gap-2">
-        {COLOR_PRESETS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); onSelect(c); }}
-            className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-              c === current ? 'border-slate-800 dark:border-neutral-100 scale-110' : 'border-transparent'
-            }`}
-            style={{ backgroundColor: c }}
-          />
-        ))}
-      </div>
-    </div>
+    <UnifiedColorPicker
+      current={current || ''}
+      onSelect={onSelect}
+      variant="floating"
+      position={pos}
+    />
   );
 };
 

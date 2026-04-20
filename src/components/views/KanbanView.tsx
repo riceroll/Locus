@@ -118,7 +118,7 @@ export const KanbanView = () => {
   const { tasks, fetchTasks, addTask, batchUpdatePositions, moveTaskToColumn } = useTaskStore();
   const { getAllEntries, isRunning, activeTaskId, elapsed } = useTimerStore();
   const { activeFilters, setFilters } = useViewStore();
-  const { language, showTotalTime } = useSettingsStore();
+  const { language, showTotalTime, kanbanCanvasDrag } = useSettingsStore();
   const {
     statuses,
     fetchStatuses,
@@ -143,6 +143,12 @@ export const KanbanView = () => {
   const [collapsedCols, setCollapsedCols] = useState<Record<string, boolean>>({});
   const [taskTimeTotals, setTaskTimeTotals] = useState<Record<string, number>>({});
   const colResizingId = useRef<string | null>(null);
+  
+  // Canvas drag references
+  const kanbanScrollRef = useRef<HTMLDivElement>(null);
+  const isCanvasDragging = useRef(false);
+  const dragStartCoords = useRef({ x: 0, y: 0 });
+  const dragStartScroll = useRef({ left: 0, top: 0 });
   const colResizeStartX = useRef(0);
   const colResizeStartW = useRef(0);
   const getColWidth = (id: string) => colWidths[id] ?? 320;
@@ -491,7 +497,46 @@ export const KanbanView = () => {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-          <div className="kanban-scroll flex-1 min-h-0 flex gap-3 overflow-x-auto overflow-y-hidden pl-2 pr-4 pt-2 pb-4 items-start">
+          <div
+            ref={kanbanScrollRef}
+            className="kanban-scroll flex-1 min-h-0 flex gap-3 overflow-x-auto overflow-y-hidden pl-2 pr-4 pt-2 pb-4 items-start"
+            onPointerDown={(e) => {
+              if (!kanbanCanvasDrag) return;
+              if (e.target === kanbanScrollRef.current) {
+                e.preventDefault(); // Prevent native text selection bounding box
+                isCanvasDragging.current = true;
+                kanbanScrollRef.current.setPointerCapture(e.pointerId);
+                dragStartCoords.current = { x: e.clientX, y: e.clientY };
+                dragStartScroll.current = { left: kanbanScrollRef.current.scrollLeft, top: kanbanScrollRef.current.scrollTop };
+                kanbanScrollRef.current.style.cursor = 'grabbing';
+                document.body.style.userSelect = 'none';
+              }
+            }}
+            onPointerMove={(e) => {
+              if (isCanvasDragging.current && kanbanScrollRef.current) {
+                const dx = e.clientX - dragStartCoords.current.x;
+                const dy = e.clientY - dragStartCoords.current.y;
+                kanbanScrollRef.current.scrollLeft = dragStartScroll.current.left - dx;
+                kanbanScrollRef.current.scrollTop = dragStartScroll.current.top - dy;
+              }
+            }}
+            onPointerUp={(e) => {
+              if (isCanvasDragging.current && kanbanScrollRef.current) {
+                isCanvasDragging.current = false;
+                kanbanScrollRef.current.releasePointerCapture(e.pointerId);
+                kanbanScrollRef.current.style.cursor = '';
+                document.body.style.userSelect = '';
+              }
+            }}
+            onPointerCancel={(e) => {
+              if (isCanvasDragging.current && kanbanScrollRef.current) {
+                isCanvasDragging.current = false;
+                kanbanScrollRef.current.releasePointerCapture(e.pointerId);
+                kanbanScrollRef.current.style.cursor = '';
+                document.body.style.userSelect = '';
+              }
+            }}
+          >
             {columns.map((column) => (
               <SortableColumnWrapper key={column.id} id={column.id} draggingColumn={activeType === 'column'}>
                 {(handleProps) => (

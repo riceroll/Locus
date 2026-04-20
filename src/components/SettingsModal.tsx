@@ -1,6 +1,7 @@
 import { X, Monitor, Sun, Moon } from 'lucide-react';
-import { useSettingsStore, ACCENT_PRESETS, type ThemeMode } from '../store/useSettingsStore';
+import { useSettingsStore, type ThemeMode, type AccentKey } from '../store/useSettingsStore';
 import { t, type Language } from '../i18n';
+import { ColorPickerDropdown } from './ui/UnifiedColorPicker';
 
 interface Props {
   onClose: () => void;
@@ -13,6 +14,8 @@ export const SettingsModal = ({ onClose }: Props) => {
     appName,
     language,
     showKanbanEstimate,
+    showKanbanSubtasks,
+    kanbanCanvasDrag,
     showKanbanTimeSpent,
     showTotalTime,
     mouseWheelZoom,
@@ -22,6 +25,8 @@ export const SettingsModal = ({ onClose }: Props) => {
     setAppName,
     setLanguage,
     setShowKanbanEstimate,
+    setShowKanbanSubtasks,
+    setKanbanCanvasDrag,
     setShowKanbanTimeSpent,
     setShowTotalTime,
     setMouseWheelZoom,
@@ -83,38 +88,10 @@ export const SettingsModal = ({ onClose }: Props) => {
             {/* Accent Color */}
             <div>
               <label className="text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-2 block">{t(language, 'accent_color')}</label>
-              <div className="grid grid-cols-7 gap-2">
-                {ACCENT_PRESETS.map((preset) => (
-                  <button
-                    key={preset.key}
-                    type="button"
-                    title={preset.key}
-                    onClick={() => setAccentColor(preset.key)}
-                    className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 ${
-                      accentColor === preset.key ? 'border-neutral-800 dark:border-white scale-110 shadow-md' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: preset.swatch }}
-                  />
-                ))}
-              </div>
-              {/* Custom color picker */}
-              <div className="mt-3 flex items-center gap-2.5">
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">{t(language, 'custom_color')}</span>
-                <label
-                  className={`relative w-7 h-7 rounded-full border-2 cursor-pointer transition-all hover:scale-110 overflow-hidden ${
-                    !ACCENT_PRESETS.some(p => p.key === accentColor) ? 'border-neutral-800 dark:border-white scale-110 shadow-md' : 'border-neutral-300 dark:border-neutral-600'
-                  }`}
-                  style={{ background: !ACCENT_PRESETS.some(p => p.key === accentColor) ? accentColor : 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }}
-                  title="Pick custom color"
-                >
-                  <input
-                    type="color"
-                    value={accentColor.match(/^#[0-9a-fA-F]{6}$/) ? accentColor : '#347285'}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                  />
-                </label>
-              </div>
+              <ColorPickerDropdown
+                current={accentColor}
+                onSelect={(color) => setAccentColor(color as AccentKey)}
+              />
             </div>
           </section>
 
@@ -143,6 +120,26 @@ export const SettingsModal = ({ onClose }: Props) => {
                 >
                   <span className="text-neutral-700 dark:text-neutral-200">{t(language, 'show_estimate_time')}</span>
                   <span className={`inline-flex h-5 w-9 rounded-full transition ${showKanbanEstimate ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
+                    <span className="h-4 w-4 rounded-full bg-white" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowKanbanSubtasks(!showKanbanSubtasks)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-600 hover:border-neutral-300 dark:hover:border-neutral-500 transition text-sm"
+                >
+                  <span className="text-neutral-700 dark:text-neutral-200">{t(language, 'show_subtasks')}</span>
+                  <span className={`inline-flex h-5 w-9 rounded-full transition ${showKanbanSubtasks ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
+                    <span className="h-4 w-4 rounded-full bg-white" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKanbanCanvasDrag(!kanbanCanvasDrag)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-600 hover:border-neutral-300 dark:hover:border-neutral-500 transition text-sm"
+                >
+                  <span className="text-neutral-700 dark:text-neutral-200">{t(language, 'kanban_canvas_drag')}</span>
+                  <span className={`inline-flex h-5 w-9 rounded-full transition ${kanbanCanvasDrag ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
                     <span className="h-4 w-4 rounded-full bg-white" />
                   </span>
                 </button>
@@ -191,21 +188,19 @@ export const SettingsModal = ({ onClose }: Props) => {
                     </span>
                   </button>
 
-                  {mouseWheelZoom && (
-                    <button
-                      type="button"
-                      onClick={() => setInvertMouseWheelZoom(!invertMouseWheelZoom)}
-                      className="flex w-full items-center justify-between py-2 text-sm text-left hover:bg-neutral-50 dark:hover:bg-neutral-700/50 rounded-lg transition-colors px-2 -mx-2"
-                    >
-                      <div>
-                        <div className="text-neutral-700 dark:text-neutral-200">{t(language, 'invert_mouse_wheel_zoom')}</div>
-                        <div className="text-xs text-neutral-500 mt-1 max-w-[280px]">{t(language, 'invert_mouse_wheel_zoom_desc')}</div>
-                      </div>
-                      <span className={`inline-flex h-5 w-9 rounded-full transition ${invertMouseWheelZoom ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
-                        <span className="h-4 w-4 rounded-full bg-white" />
-                      </span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setInvertMouseWheelZoom(!invertMouseWheelZoom)}
+                    className="flex w-full items-center justify-between py-2 text-sm text-left hover:bg-neutral-50 dark:hover:bg-neutral-700/50 rounded-lg transition-colors px-2 -mx-2"
+                  >
+                    <div>
+                      <div className="text-neutral-700 dark:text-neutral-200">{t(language, 'invert_mouse_wheel_zoom')}</div>
+                      <div className="text-xs text-neutral-500 mt-1 max-w-[280px]">{t(language, 'invert_mouse_wheel_zoom_desc')}</div>
+                    </div>
+                    <span className={`inline-flex h-5 w-9 rounded-full transition ${invertMouseWheelZoom ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
+                      <span className="h-4 w-4 rounded-full bg-white" />
+                    </span>
+                  </button>
                 </div>
               </div>
 

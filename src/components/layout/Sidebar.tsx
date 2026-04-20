@@ -34,16 +34,14 @@ import {
   Network
 } from 'lucide-react';
 
+import { ColorPickerDropdown } from '../ui/UnifiedColorPicker';
+
 const VIEW_ICONS = {
   list: LayoutList,
   kanban: Columns3,
   calendar: Calendar,
   tree: Network,
 } as const;
-
-const VIEW_COLOR_PRESETS = [
-  '#64748b', '#ef4444', '#f97316', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
-];
 
 // Locus app icon — concentric rings focal point
 const LocusIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
@@ -193,23 +191,15 @@ const SortableViewRow = ({
             })}
             <div className="my-1 border-t border-slate-100 dark:border-neutral-700" />
             <div className="px-3 py-1 text-[11px] font-semibold text-slate-400 dark:text-neutral-500 uppercase tracking-wider">{t(language, 'btn_change_color')}</div>
-            <div className="px-3 pb-1.5 pt-0.5 flex flex-wrap gap-1.5">
-              {VIEW_COLOR_PRESETS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => { onSetColor(view.id, color); onCloseMenu(); }}
-                  className={`w-4 h-4 rounded-full border transition-transform hover:scale-110 ${
-                    view.color === color ? 'border-slate-700 dark:border-neutral-100' : 'border-transparent'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              ))}
+            <div className="px-3 pb-1.5 pt-0.5 mt-2 flex flex-col gap-2">
+              <ColorPickerDropdown
+                current={view.color || ''}
+                onSelect={(c) => { onSetColor(view.id, c); onCloseMenu(); }}
+              />
               <button
                 type="button"
                 onClick={() => { onSetColor(view.id, null); onCloseMenu(); }}
-                className="text-[10px] px-1.5 h-4 rounded bg-slate-100 dark:bg-neutral-700 text-slate-500 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-600"
+                className="mt-2 w-full text-center text-[10px] py-1 rounded bg-slate-100 dark:bg-neutral-700 text-slate-500 dark:text-neutral-300 hover:bg-slate-200 dark:hover:bg-neutral-600"
               >
                 {t(language, 'btn_clear')}
               </button>

@@ -270,6 +270,12 @@ export const runMigrations = async (db: Awaited<ReturnType<typeof Database.load>
         await db.execute('ALTER TABLE tasks ADD COLUMN visible INTEGER NOT NULL DEFAULT 1');
       }
 
+      // Cleanup dangling temporary migration tables
+      await db.execute('PRAGMA foreign_keys = OFF');
+      await db.execute('DROP TABLE IF EXISTS tasks_new');
+      await db.execute('DROP TABLE IF EXISTS time_entries_new');
+      await db.execute('PRAGMA foreign_keys = ON');
+
       console.log('Database initialized');
   } catch(e) {
       console.error('Failed to initialize db', e);

@@ -33,9 +33,9 @@ export const SortableColumnWrapper = ({
     zIndex: isDragging ? 50 : undefined,
   };
   return (
-    <div className="flex items-stretch">
+    <div className="flex items-stretch max-h-full min-h-0 shrink-0">
       <ColumnDropLine active={draggingColumn && isOver && !isDragging} />
-      <div ref={setNodeRef} style={style}>
+      <div ref={setNodeRef} style={style} className="max-h-full min-h-0 flex flex-col shrink-0 flex-1">
         {children({ attributes, listeners })}
       </div>
     </div>

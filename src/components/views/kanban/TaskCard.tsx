@@ -52,7 +52,7 @@ export const SortableTaskCard = ({
     data: { type: 'task', status_id: task.status_id },
   });
   const { isRunning, activeTaskId, startTimer, stopTimer } = useTimerStore();
-  const { showKanbanEstimate, showKanbanTimeSpent } = useSettingsStore();
+  const { showKanbanEstimate, showKanbanTimeSpent, showKanbanSubtasks } = useSettingsStore();
   const { updateTaskStatus, toggleVisible, tasks } = useTaskStore();
   const parentTask = task.parent_id ? tasks.find(t => t.id === task.parent_id) : null;
   const { projects } = useProjectStore();
@@ -224,6 +224,53 @@ export const SortableTaskCard = ({
             {isActive ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
           </button>
         </div>
+
+        {/* Render Subtasks */}
+        {!isHidden && showKanbanSubtasks && childCount > 0 && (
+          <div className="px-3 pb-3 pt-0 pl-9 flex flex-col gap-1.5">
+            {tasks.filter(t => t.parent_id === task.id).map(subtask => {
+              const subIsDone = doneStatus ? subtask.status_id === doneStatus.id : false;
+              return (
+                <div key={subtask.id} className="flex items-center gap-2 group/subtask">
+                  <button
+                    type="button"
+                    className={`task-checkbox ${subIsDone ? 'task-checkbox-on' : 'task-checkbox-off'}`}
+                    style={{ width: 14, height: 14, minWidth: 14 }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!doneStatus) return;
+                      if (subIsDone) {
+                        const defaultStatus =
+                          statuses.find((s) => Number(s.is_default) === 1 && Number(s.is_done) !== 1) ||
+                          statuses.find((s) => Number(s.is_done) !== 1);
+                        if (defaultStatus) await updateTaskStatus(subtask.id, defaultStatus.id);
+                      } else {
+                        await updateTaskStatus(subtask.id, doneStatus.id);
+                      }
+                    }}
+                  >
+                    {subIsDone && <Check className="w-2.5 h-2.5" strokeWidth={3} />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenDetail?.(subtask.id);
+                    }}
+                    className={`text-xs font-medium truncate flex-1 text-left hover:text-brand-600 hover:underline transition ${
+                      subIsDone ? 'line-through text-slate-400 dark:text-neutral-500' : 'text-slate-700 dark:text-neutral-300'
+                    }`}
+                  >
+                    {subtask.title}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </>
   );
