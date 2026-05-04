@@ -1,7 +1,8 @@
 import { type Task } from '../../../store/useTaskStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { useStatusStore } from '../../../store/useStatusStore';
-import { ChevronRight, AlertCircle, Calendar, Plus, Check } from 'lucide-react';
+import { ChevronRight, AlertCircle, Calendar, Plus, Check, Play, Square } from 'lucide-react';
+import { useTimerStore } from '../../../store/useTimerStore';
 import { useTaskStore } from '../../../store/useTaskStore';
 
 function format(date: Date, _fmt: string) { return date.toLocaleDateString(); }
@@ -10,14 +11,17 @@ interface TreeCardProps {
   task: Task;
   hasChildren: boolean;
   isCollapsed: boolean;
+  isRoot?: boolean;
   dragAttributes?: any;
   dragListeners?: any;
 }
 
-export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragListeners }: TreeCardProps) => {
+export const TreeCard = ({ task, hasChildren, isCollapsed, isRoot = false, dragAttributes, dragListeners }: TreeCardProps) => {
   const { projects } = useProjectStore();
   const { statuses } = useStatusStore();
   const { updateTask, addTask, updateTaskStatus } = useTaskStore();
+  const { activeTaskId, isRunning, startTimer, stopTimer } = useTimerStore();
+  const isActive = isRunning && activeTaskId === task.id;
 
   const project = projects.find(p => p.id === task.project_id);
   const status = statuses.find(s => s.id === task.status_id);
@@ -48,7 +52,7 @@ export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragL
       } flex flex-col p-3 transition-all hover:shadow-md hover:border-brand-400 group z-10 shrink-0`}
       style={{ zIndex: 10 }}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-stretch gap-2">
         <button
           type="button"
           className={`task-checkbox mt-0.5 ${isDone ? 'task-checkbox-on' : 'task-checkbox-off'}`}
@@ -68,7 +72,7 @@ export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragL
         >
           {isDone && <Check className="w-3 h-3" strokeWidth={3} />}
         </button>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col">
           <button
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
@@ -76,12 +80,12 @@ export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragL
               e.stopPropagation();
               window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
             }}
-            className={`text-sm font-semibold truncate leading-tight text-left hover:text-brand-600 hover:underline transition ${isDone ? 'text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-100'}`}
+            className={`text-sm font-semibold line-clamp-3 leading-tight break-words text-left hover:text-brand-600 hover:underline transition ${isDone ? 'text-neutral-500 line-through' : 'text-neutral-800 dark:text-neutral-100'}`}
           >
             {task.title}
           </button>
           
-          <div className="flex items-center gap-2 mt-2 break-words">
+          <div className="flex items-center gap-2 mt-auto break-words w-full">
             {project && (
               <span 
                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium leading-none"
@@ -110,15 +114,32 @@ export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragL
           </div>
         </div>
         
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex flex-col items-center gap-1 shrink-0 self-stretch justify-center">
           <button
             type="button"
-            onClick={handleAddChild}
-            className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Add Child Task"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
+            className={`shrink-0 btn-icon w-6 h-6 flex items-center justify-center ${
+              isActive
+                ? 'bg-red-50 dark:bg-red-900/30 text-red-500'
+                : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-400 dark:text-neutral-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30'
+            }`}
+            title={isActive ? 'Stop timer' : 'Start timer'}
+            onClick={(e) => { e.stopPropagation(); isActive ? stopTimer() : startTimer(task.id, task.title); }}
           >
-            <Plus className="w-4 h-4" />
+            {isActive ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
           </button>
+          {!hasChildren && (
+            <button
+              type="button"
+              onClick={handleAddChild}
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Add Child Task"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
           {hasChildren && (
             <button 
               type="button"
@@ -126,9 +147,9 @@ export const TreeCard = ({ task, hasChildren, isCollapsed, dragAttributes, dragL
                 e.stopPropagation();
                 toggleCollapse();
               }}
-              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-400 focus:outline-none"
+              className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-neutral-700 text-slate-400 focus:outline-none transition-opacity ${isRoot ? 'opacity-0 group-hover:opacity-100' : ''}`}
             >
-              <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${!isCollapsed ? 'rotate-90' : ''}`} />
+              <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${!isCollapsed ? 'rotate-180' : ''}`} />
             </button>
           )}
         </div>

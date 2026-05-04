@@ -4,9 +4,12 @@ import { useSortable, SortableContext, verticalListSortingStrategy, sortableKeyb
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useTaskStore } from '../../../store/useTaskStore';
-import { useState } from 'react';
+import { useSettingsStore } from '../../../store/useSettingsStore';
+import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { DragOverlay, type DragStartEvent } from '@dnd-kit/core';
+import { Plus } from 'lucide-react';
+import { t } from '../../../i18n';
 
 interface TreeNodeProps {
   node: Task & { children: any[] };
@@ -18,12 +21,14 @@ interface TreeNodeProps {
   isSiblingDragging?: boolean;
   canvasScale?: number;
   forcedCollapsedIds?: Set<string>;
+  onAddSiblingBelow?: (title: string) => Promise<void>;
 }
 
-export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, isOnly = true, isOverlay = false, isSiblingDragging = false, canvasScale = 1, forcedCollapsedIds }: TreeNodeProps) => {
+export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, isOnly = true, isOverlay = false, isSiblingDragging = false, canvasScale = 1, forcedCollapsedIds, onAddSiblingBelow }: TreeNodeProps) => {
   const hasChildren = node.children && node.children.length > 0;
   const isCollapsed = node.collapsed === 1 || (forcedCollapsedIds?.has(node.id.toString()) ?? false) || isOverlay;
-  const { tasks, batchUpdatePositions } = useTaskStore();
+  const { tasks, batchUpdatePositions, addTask } = useTaskStore();
+  const { language } = useSettingsStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -31,8 +36,111 @@ export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, i
   );
 
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
+  const [addingChildPosition, setAddingChildPosition] = useState<'top' | 'bottom' | null>(null);
+  const [addingChildTitle, setAddingChildTitle] = useState('');
+  const [addInputAnchor, setAddInputAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [addingSiblingBelow, setAddingSiblingBelow] = useState(false);
+  const [addingSiblingTitle, setAddingSiblingTitle] = useState('');
+  const [siblingAnchor, setSiblingAnchor] = useState<{ x: number; y: number } | null>(null);
+  const siblingStripRef = useRef<HTMLButtonElement>(null);
   // Local set of child IDs forced collapsed during drag (no DB writes)
   const [childForcedCollapsedIds, setChildForcedCollapsedIds] = useState<Set<string> | null>(null);
+  const stripRef = useRef<HTMLButtonElement>(null);
+
+  const startAddingChild = (position: 'top' | 'bottom') => {
+    if (stripRef.current) {
+      const rect = stripRef.current.getBoundingClientRect();
+      setAddInputAnchor({ x: rect.left, y: rect.top });
+    }
+    setAddingChildPosition(position);
+    setAddingChildTitle('');
+  };
+
+  const cancelAddingChild = () => {
+    setAddingChildPosition(null);
+    setAddingChildTitle('');
+    setAddInputAnchor(null);
+  };
+
+  const addChildAtBottom = async (title: string) => {
+    if (!title.trim()) return;
+    await addTask(title.trim(), undefined, node.id);
+  };
+
+  const addChildAtTop = async (title: string) => {
+    if (!title.trim()) return;
+    const newId = await addTask(title.trim(), undefined, node.id);
+    if (!newId) return;
+
+    const childIds = tasks
+      .filter((task) => task.parent_id === node.id)
+      .sort((a, b) => a.position - b.position)
+      .map((task) => task.id)
+      .filter((id) => id !== newId);
+
+    await batchUpdatePositions([
+      { id: newId, position: 0 },
+      ...childIds.map((id, index) => ({ id, position: index + 1 })),
+    ]);
+  };
+
+  const confirmAddingChild = async () => {
+    if (!addingChildPosition || !addingChildTitle.trim()) return;
+    if (addingChildPosition === 'top') {
+      await addChildAtTop(addingChildTitle);
+    } else {
+      await addChildAtBottom(addingChildTitle);
+    }
+    cancelAddingChild();
+  };
+
+  const childAddStripClassName = 'w-[280px] h-6 rounded-lg border border-dashed border-slate-200 dark:border-neutral-700 bg-white/80 dark:bg-neutral-800/80 text-slate-400 dark:text-neutral-500 flex items-center justify-center opacity-0 hover:opacity-100 hover:border-brand-300 hover:bg-white dark:hover:bg-neutral-800 hover:text-brand-500 dark:hover:text-brand-400 transition-all shadow-sm pointer-events-auto cursor-pointer';
+  const siblingAddStripClassName = 'w-[280px] h-5 rounded-md border border-dashed border-slate-200 dark:border-neutral-700 bg-white/80 dark:bg-neutral-800/80 text-slate-400 dark:text-neutral-500 flex items-center justify-center opacity-0 hover:opacity-100 hover:border-brand-300 hover:bg-white dark:hover:bg-neutral-800 hover:text-brand-500 dark:hover:text-brand-400 transition-all shadow-sm pointer-events-auto cursor-pointer';
+
+  const childAddInputPortal = () => {
+    if (!addingChildPosition || !addInputAnchor || typeof window === 'undefined') return null;
+    return createPortal(
+      <div
+        className="fixed z-[9999] pointer-events-auto"
+        style={{ left: addInputAnchor.x, top: addInputAnchor.y }}
+      >
+        <div className="w-[280px] rounded-lg border border-brand-200 dark:border-brand-700 bg-white dark:bg-neutral-800 px-2.5 py-2 shadow-[0_0_0_3px_theme(colors.brand.100),0_4px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_3px_theme(colors.brand.900/60%),0_4px_12px_rgba(0,0,0,0.3)]">
+          <input
+            autoFocus
+            type="text"
+            value={addingChildTitle}
+            onChange={(e) => setAddingChildTitle(e.target.value)}
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void confirmAddingChild();
+              if (e.key === 'Escape') cancelAddingChild();
+            }}
+            placeholder={t(language, 'placeholder_task_name')}
+            className="w-full text-sm bg-transparent text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 outline-none"
+          />
+          <div className="mt-2 flex items-center gap-1.5">
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => void confirmAddingChild()}
+              className="text-xs px-2.5 py-1 rounded bg-brand-600 text-white hover:bg-brand-700 transition"
+            >
+              {t(language, 'add')}
+            </button>
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={cancelAddingChild}
+              className="text-xs px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition"
+            >
+              {t(language, 'cancel')}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
 
   const handleChildDragStart = (event: DragStartEvent) => {
     setActiveChildId(event.active.id.toString());
@@ -126,6 +234,7 @@ export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, i
           task={node}  
           hasChildren={hasChildren} 
           isCollapsed={isCollapsed} 
+          isRoot={isRoot}
           dragAttributes={attributes} 
           dragListeners={listeners} 
         />
@@ -137,7 +246,7 @@ export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, i
 
       {/* Children Sub-Tree */}
       {hasChildren && !isCollapsed && (
-        <div className="flex flex-col relative ml-[24px] z-0">
+        <div className="group/children flex flex-col relative ml-[24px] z-0">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -178,6 +287,106 @@ export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, i
               document.body
             )}
           </DndContext>
+          <div
+            className="absolute left-0 bottom-0 w-[304px] pl-[24px] z-20 pointer-events-none"
+            style={{ transform: 'translateY(calc(100% + 0.5px))' }}
+          >
+            {addingChildPosition !== 'bottom' && (
+              <button
+                ref={stripRef}
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => startAddingChild('bottom')}
+                className={childAddStripClassName}
+                title="Add child at bottom"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          {childAddInputPortal()}
+        </div>
+      )}
+
+      {/* Root sibling add strip */}
+      {isRoot && !isOverlay && onAddSiblingBelow && (
+        <div
+          className="absolute left-0 bottom-0 w-[280px] z-20 pointer-events-none"
+          style={{ transform: 'translateY(calc(100% + 2px))' }}
+        >
+          {!addingSiblingBelow && (
+            <button
+              ref={siblingStripRef}
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => {
+                if (siblingStripRef.current) {
+                  const rect = siblingStripRef.current.getBoundingClientRect();
+                  setSiblingAnchor({ x: rect.left, y: rect.top });
+                }
+                setAddingSiblingBelow(true);
+                setAddingSiblingTitle('');
+              }}
+              className={siblingAddStripClassName}
+              title="Add root task below"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+          {addingSiblingBelow && siblingAnchor && typeof window !== 'undefined' && createPortal(
+            <div
+              className="fixed z-[9999] pointer-events-auto"
+              style={{ left: siblingAnchor.x, top: siblingAnchor.y }}
+            >
+              <div className="w-[280px] rounded-lg border border-brand-200 dark:border-brand-700 bg-white dark:bg-neutral-800 px-2.5 py-2 shadow-[0_0_0_3px_theme(colors.brand.100),0_4px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_0_0_3px_theme(colors.brand.900/60%),0_4px_12px_rgba(0,0,0,0.3)]">
+                <input
+                  autoFocus
+                  type="text"
+                  value={addingSiblingTitle}
+                  onChange={(e) => setAddingSiblingTitle(e.target.value)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      void onAddSiblingBelow(addingSiblingTitle).then(() => {
+                        setAddingSiblingBelow(false);
+                        setSiblingAnchor(null);
+                      });
+                    }
+                    if (e.key === 'Escape') {
+                      setAddingSiblingBelow(false);
+                      setSiblingAnchor(null);
+                    }
+                  }}
+                  placeholder={t(language, 'placeholder_task_name')}
+                  className="w-full text-sm bg-transparent text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 outline-none"
+                />
+                <div className="mt-2 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => {
+                      void onAddSiblingBelow(addingSiblingTitle).then(() => {
+                        setAddingSiblingBelow(false);
+                        setSiblingAnchor(null);
+                      });
+                    }}
+                    className="text-xs px-2.5 py-1 rounded bg-brand-600 text-white hover:bg-brand-700 transition"
+                  >
+                    {t(language, 'add')}
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => { setAddingSiblingBelow(false); setSiblingAnchor(null); }}
+                    className="text-xs px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition"
+                  >
+                    {t(language, 'cancel')}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
         </div>
       )}
     </div>

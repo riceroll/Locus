@@ -23,6 +23,13 @@ import {
 
 import { createPortal, flushSync } from 'react-dom';
 import { TaskDetailModal } from './TaskDetailModal';
+import { useViewStore } from '../../store/useViewStore';
+import { useProjectStore } from '../../store/useProjectStore';
+import { useStatusStore } from '../../store/useStatusStore';
+import { applyTaskFilters } from '../../lib/taskFilters';
+import { Tooltip } from '../ui/Tooltip';
+import { Zap, Eye, ChevronsLeftRight, ChevronsRightLeft, Plus } from 'lucide-react';
+import { t } from '../../i18n';
 
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 2.4;
@@ -43,7 +50,153 @@ type WebKitGestureEvent = Event & {
 };
 
 export const TreeView = () => {
-  const { mouseWheelZoom, invertMouseWheelZoom } = useSettingsStore();
+  const { tasks, batchUpdatePositions, updateTask, addTask } = useTaskStore();
+  const { mouseWheelZoom, invertMouseWheelZoom, language } = useSettingsStore();
+
+  const { activeFilters, setFilters } = useViewStore();
+  const { projects } = useProjectStore();
+  const { statuses } = useStatusStore();
+  
+  const doneSet = useMemo(() => new Set(statuses.filter((s) => Number(s.is_done) === 1).map((s) => s.id)), [statuses]);
+  
+  const incompleteDescendants = useMemo(() => {
+    const parentMap = new Map<string, Task[]>();
+    for (const t of tasks) {
+      if (t.parent_id) {
+        let arr = parentMap.get(t.parent_id);
+        if (!arr) { arr = []; parentMap.set(t.parent_id, arr); }
+        arr.push(t);
+      }
+    }
+    const incomp = new Set<string>();
+    const check = (id: string): boolean => {
+      if (incomp.has(id)) return true;
+      const children = parentMap.get(id);
+      if (!children) return false;
+      for (const c of children) {
+        if (!doneSet.has(c.status_id) || check(c.id)) {
+          incomp.add(id);
+          return true;
+        }
+      }
+      return false;
+    };
+    for (const t of tasks) check(t.id);
+    return incomp;
+  }, [tasks, doneSet]);
+
+  const filteredTasks = useMemo(() => {
+    let pool = applyTaskFilters(tasks, activeFilters, { projects });
+    if (activeFilters.actionableOnly) {
+      pool = pool.filter((t) => {
+        if (incompleteDescendants.has(t.id)) return false;
+        if (doneSet.has(t.status_id)) return false;
+        return true;
+      });
+    }
+    if (activeFilters.viewableOnly) {
+      pool = pool.filter((t) => !!t.visible);
+    }
+    return new Set(pool.map((t) => t.id));
+  }, [tasks, activeFilters, projects, incompleteDescendants, doneSet]);
+
+  const parentTaskIds = useMemo(() => {
+    return new Set(tasks.filter((t) => t.parent_id).map((t) => t.parent_id!));
+  }, [tasks]);
+
+  const filterDefaultProjectId = useMemo(() => {
+    const projectRule = activeFilters.rules.find((r) => r.field === 'project_id' && r.operator === 'include' && r.values.length > 0);
+    if (projectRule?.values[0]) return projectRule.values[0];
+
+    const areaRule = activeFilters.rules.find((r) => r.field === 'area_id' && r.operator === 'include' && r.values.length > 0);
+    if (!areaRule?.values[0]) return undefined;
+
+    return projects.find((project) => project.area_id === areaRule.values[0])?.id;
+  }, [activeFilters, projects]);
+
+  const filterDefaultStatusId = useMemo(() => {
+    const statusRule = activeFilters.rules.find((r) => r.field === 'status_id' && r.operator === 'include' && r.values.length > 0);
+    if (statusRule?.values[0]) return statusRule.values[0];
+
+    if (activeFilters.actionableOnly) {
+      return statuses.find((status) => Number(status.is_done) !== 1)?.id;
+    }
+
+    return undefined;
+  }, [activeFilters, statuses]);
+
+  const collapseAll = useCallback(async () => {
+    const targets = tasks.filter((t) => parentTaskIds.has(t.id) && Number(t.collapsed) !== 1);
+    await Promise.all(targets.map((t) => updateTask(t.id, { collapsed: 1 })));
+  }, [tasks, parentTaskIds, updateTask]);
+
+  const expandAll = useCallback(async () => {
+    const targets = tasks.filter((t) => parentTaskIds.has(t.id) && Number(t.collapsed) !== 0);
+    await Promise.all(targets.map((t) => updateTask(t.id, { collapsed: 0 })));
+  }, [tasks, parentTaskIds, updateTask]);
+
+  const [addingRootPosition, setAddingRootPosition] = useState<'top' | 'bottom' | null>(null);
+  const [addingRootTitle, setAddingRootTitle] = useState('');
+
+  const addRootTaskAtBottom = useCallback(async (title: string) => {
+    if (!title.trim()) return;
+    await addTask(title.trim(), filterDefaultProjectId, null, filterDefaultStatusId);
+  }, [addTask, filterDefaultProjectId, filterDefaultStatusId]);
+
+  const addRootTaskAtTop = useCallback(async (title: string) => {
+    if (!title.trim()) return;
+    const newId = await addTask(title.trim(), filterDefaultProjectId, null, filterDefaultStatusId);
+    if (!newId) return;
+
+    const rootIds = tasks
+      .filter((t) => t.parent_id === null)
+      .sort((a, b) => a.position - b.position)
+      .map((t) => t.id)
+      .filter((id) => id !== newId);
+
+    await batchUpdatePositions([
+      { id: newId, position: 0 },
+      ...rootIds.map((id, index) => ({ id, position: index + 1 })),
+    ]);
+  }, [addTask, filterDefaultProjectId, filterDefaultStatusId, tasks, batchUpdatePositions]);
+
+  const addRootTaskAfter = useCallback(async (afterId: string, title: string) => {
+    if (!title.trim()) return;
+    const sortedRoots = tasks
+      .filter((t) => t.parent_id === null)
+      .sort((a, b) => a.position - b.position);
+    const afterIdx = sortedRoots.findIndex((t) => t.id === afterId);
+    const newId = await addTask(title.trim(), filterDefaultProjectId, null, filterDefaultStatusId);
+    if (!newId) return;
+    const idsWithout = sortedRoots.map((t) => t.id).filter((id) => id !== newId);
+    const insertAt = afterIdx + 1;
+    const reordered = [
+      ...idsWithout.slice(0, insertAt),
+      newId,
+      ...idsWithout.slice(insertAt),
+    ];
+    await batchUpdatePositions(reordered.map((id, index) => ({ id, position: index })));
+  }, [addTask, filterDefaultProjectId, filterDefaultStatusId, tasks, batchUpdatePositions]);
+
+  const startAddingRoot = useCallback((position: 'top' | 'bottom') => {
+    setAddingRootPosition(position);
+    setAddingRootTitle('');
+  }, []);
+
+  const cancelAddingRoot = useCallback(() => {
+    setAddingRootPosition(null);
+    setAddingRootTitle('');
+  }, []);
+
+  const confirmAddingRoot = useCallback(async () => {
+    if (!addingRootTitle.trim() || !addingRootPosition) return;
+    if (addingRootPosition === 'top') {
+      await addRootTaskAtTop(addingRootTitle);
+    } else {
+      await addRootTaskAtBottom(addingRootTitle);
+    }
+    cancelAddingRoot();
+  }, [addingRootTitle, addingRootPosition, addRootTaskAtTop, addRootTaskAtBottom, cancelAddingRoot]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
@@ -70,7 +223,6 @@ export const TreeView = () => {
     cardScreenY: number;
   } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
-  const { tasks, batchUpdatePositions } = useTaskStore();
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const panStateRef = useRef<PanState | null>(null);
@@ -142,23 +294,34 @@ export const TreeView = () => {
       map.set(t.id, { ...t, children: [] });
     }
 
+    const keepNode = new Set<string>();
+    const markKeep = (id: string) => {
+      let current: string | null = id;
+      while (current && !keepNode.has(current)) {
+        keepNode.add(current);
+        const node = map.get(current);
+        current = node?.parent_id || null;
+      }
+    };
+    
     for (const t of tasks) {
+      if (filteredTasks.has(t.id)) {
+        markKeep(t.id);
+      }
+    }
+
+    for (const t of tasks) {
+      if (!keepNode.has(t.id)) continue;
       const node = map.get(t.id)!;
-      if (t.parent_id && map.has(t.parent_id)) {
+      if (t.parent_id && map.has(t.parent_id) && keepNode.has(t.parent_id)) {
         map.get(t.parent_id)!.children.push(node);
       } else {
         roots.push(node);
       }
     }
 
-    const sortByPos = (a: Task, b: Task) => (a.position - b.position) || (b.updated_at - a.updated_at);
-    roots.sort(sortByPos);
-    for (const node of map.values()) {
-      node.children.sort(sortByPos);
-    }
-
     return roots;
-  }, [tasks]);
+  }, [tasks, filteredTasks]);
 
   useEffect(() => {
     scaleRef.current = scale;
@@ -271,7 +434,11 @@ export const TreeView = () => {
         target.closest('[data-tree-card="true"]') ||
         target.closest('button') ||
         target.closest('a') ||
-        target.closest('[role="button"]')
+        target.closest('[role="button"]') ||
+        target.closest('[data-modal="true"]') ||
+        target.closest('input') ||
+        target.closest('textarea') ||
+        target.closest('select')
       ) {
         return; // Clicked on a card or interactive element, let normal click/drag handle it
       }
@@ -451,16 +618,107 @@ export const TreeView = () => {
     return null;
   };
 
+  const rootAddStripClassName = 'w-[280px] h-10 rounded-xl border border-dashed border-slate-200 dark:border-neutral-700 bg-white/80 dark:bg-neutral-800/80 text-slate-400 dark:text-neutral-500 flex items-center justify-center opacity-0 hover:opacity-100 hover:border-brand-300 hover:bg-white dark:hover:bg-neutral-800 hover:text-brand-500 dark:hover:text-brand-400 transition-all shadow-sm self-start';
+
+  const rootAddInput = () => (
+    <div className="w-[280px] self-start rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shadow-sm px-2.5 py-2">
+      <input
+        autoFocus
+        type="text"
+        value={addingRootTitle}
+        onChange={(e) => setAddingRootTitle(e.target.value)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void confirmAddingRoot();
+          if (e.key === 'Escape') cancelAddingRoot();
+        }}
+        placeholder={t(language, 'placeholder_task_name')}
+        className="w-full text-sm bg-transparent text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 outline-none"
+      />
+      <div className="mt-2 flex items-center gap-1.5">
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => void confirmAddingRoot()}
+          className="text-xs px-2.5 py-1 rounded bg-brand-600 text-white hover:bg-brand-700 transition"
+        >
+          {t(language, 'add')}
+        </button>
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={cancelAddingRoot}
+          className="text-xs px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition"
+        >
+          {t(language, 'cancel')}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div
-      ref={viewportRef}
-      onPointerDownCapture={handleViewportPointerDownCapture}
-      onPointerMove={handleViewportPointerMove}
-      onPointerUp={handleViewportPointerUp}
-      onPointerCancel={handleViewportPointerCancel}
-      onLostPointerCapture={() => stopPanning()}
-      className={`h-full overflow-auto bg-slate-50 dark:bg-neutral-900 ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
-    >
+    <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-neutral-900">
+      {/* Toolbar */}
+      <div className="shrink-0 px-4 py-2 border-b-2 border-neutral-200 dark:border-neutral-700 flex items-center gap-2 flex-wrap bg-white dark:bg-neutral-800">
+        <Tooltip id="actionable">
+          <button
+            type="button"
+            onClick={() => setFilters({ ...activeFilters, actionableOnly: !activeFilters.actionableOnly, viewableOnly: false })}
+            className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              activeFilters.actionableOnly
+                ? 'bg-amber-100 border-amber-300 text-amber-700'
+                : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            {t(language, 'btn_actionable')}
+          </button>
+        </Tooltip>
+        <Tooltip id="viewable">
+          <button
+            type="button"
+            onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
+            className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              activeFilters.viewableOnly
+                ? 'bg-brand-100 border-brand-300 text-brand-700'
+                : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            {t(language, 'btn_viewable')}
+          </button>
+        </Tooltip>
+        <Tooltip id="collapse-all">
+          <button
+            type="button"
+            onClick={() => void collapseAll()}
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600"
+          >
+            <ChevronsRightLeft className="w-3.5 h-3.5" />
+            {t(language, 'btn_collapse_all')}
+          </button>
+        </Tooltip>
+        <Tooltip id="expand-all">
+          <button
+            type="button"
+            onClick={() => void expandAll()}
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600"
+          >
+            <ChevronsLeftRight className="w-3.5 h-3.5" />
+            {t(language, 'btn_expand_all')}
+          </button>
+        </Tooltip>
+      </div>
+
+      <div
+        ref={viewportRef}
+        onPointerDownCapture={handleViewportPointerDownCapture}
+        onPointerMove={handleViewportPointerMove}
+        onPointerUp={handleViewportPointerUp}
+        onPointerCancel={handleViewportPointerCancel}
+        onLostPointerCapture={() => stopPanning()}
+        className={`flex-1 overflow-auto bg-slate-50 dark:bg-neutral-900 ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+      >
       <div
         className="relative"
         style={{ width: CANVAS_SIZE, height: CANVAS_SIZE }}
@@ -469,7 +727,7 @@ export const TreeView = () => {
         <div data-canvas-bg="true" className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(148,163,184,0.16)_1px,transparent_1px)] [background-size:32px_32px] dark:bg-[radial-gradient(circle_at_center,rgba(82,82,91,0.24)_1px,transparent_1px)]" />
         <div
         ref={contentRef}
-        className="absolute flex flex-col gap-6 p-8"
+        className="group/tree absolute flex flex-col gap-6 p-8"
         style={{
           left: CANVAS_ORIGIN,
           top: CANVAS_ORIGIN,
@@ -478,6 +736,22 @@ export const TreeView = () => {
             width: 'max-content',
           }}
         >
+          {treeForest.length > 0 && addingRootPosition === 'top' && (
+            <div className="self-start -mb-2">
+              {rootAddInput()}
+            </div>
+          )}
+          {treeForest.length > 0 && addingRootPosition !== 'top' && (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => startAddingRoot('top')}
+              className={rootAddStripClassName}
+              title="Add root task at top"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -489,17 +763,18 @@ export const TreeView = () => {
               items={treeForest.map(r => r.id.toString())}
               strategy={verticalListSortingStrategy}
             >
-              {treeForest.map((root: any, idx: number, arr: any[]) => (
-                <TreeNode
-                  key={root.id}
-                  node={root}
-                  isRoot={true}
-                  isLast={idx === arr.length - 1}
-                  canvasScale={scale}
-                  isSiblingDragging={!!activeId}
-                  forcedCollapsedIds={forcedCollapsedRootIds ?? undefined}
-                />
-              ))}
+                {treeForest.map((root: any, idx: number, arr: any[]) => (
+                  <TreeNode
+                    key={root.id}
+                    node={root}
+                    isRoot={true}
+                    isLast={idx === arr.length - 1}
+                    canvasScale={scale}
+                    isSiblingDragging={!!activeId}
+                    forcedCollapsedIds={forcedCollapsedRootIds ?? undefined}
+                    onAddSiblingBelow={(title) => addRootTaskAfter(root.id, title)}
+                  />
+                ))}
             </SortableContext>
             {typeof window !== 'undefined' && createPortal(
               <DragOverlay zIndex={20} dropAnimation={null} modifiers={[dragOverlayModifier]}>
@@ -523,9 +798,39 @@ export const TreeView = () => {
             )}
           </DndContext>
 
+          {treeForest.length > 0 && addingRootPosition === 'bottom' && (
+            <div className="self-start -mt-2">
+              {rootAddInput()}
+            </div>
+          )}
+          {treeForest.length > 0 && addingRootPosition !== 'bottom' && (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => startAddingRoot('bottom')}
+              className={rootAddStripClassName}
+              title="Add root task at bottom"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+
           {treeForest.length === 0 && (
-            <div className="flex min-h-[240px] min-w-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/80 p-12 text-slate-400 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-800/70">
-              No tasks found.
+            <div className="flex min-h-[240px] min-w-[320px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-white/80 p-12 text-slate-400 shadow-sm backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-800/70">
+              {addingRootPosition === 'top' ? (
+                rootAddInput()
+              ) : (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => startAddingRoot('top')}
+                  className="w-8 h-8 rounded-full border border-dashed border-slate-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-slate-400 dark:text-neutral-500 flex items-center justify-center hover:border-brand-400 hover:text-brand-600 dark:hover:border-brand-500 dark:hover:text-brand-400 transition-all shadow-sm"
+                  title="Add root task"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
+              <div>No tasks found.</div>
             </div>
           )}
         </div>
@@ -533,6 +838,7 @@ export const TreeView = () => {
       {activeDetailId && (
         <TaskDetailModal taskId={activeDetailId} onClose={() => setActiveDetailId(null)} />
       )}
+    </div>
     </div>
   );
 };

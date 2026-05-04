@@ -280,7 +280,7 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
   // (old modal return removed)
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div className={`bg-white dark:bg-neutral-800 shadow-2xl dark:shadow-neutral-900/50 flex flex-col overflow-hidden transition-all duration-200 ${isFullscreen ? 'w-screen h-screen rounded-none' : 'w-[520px] max-w-full max-h-[90vh] rounded-xl'}`} onClick={(e) => e.stopPropagation()}>
+      <div data-modal="true" className={`bg-white dark:bg-neutral-800 shadow-2xl dark:shadow-neutral-900/50 flex flex-col overflow-hidden transition-all duration-200 ${isFullscreen ? 'w-screen h-screen rounded-none' : 'w-[520px] max-w-full max-h-[90vh] rounded-xl'}`} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
 
         {/* Header */}
         <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-100 dark:border-neutral-700">
@@ -436,7 +436,8 @@ export const TaskDetailModal = ({ taskId, onClose }: Props) => {
                     const val = e.target.value ? new Date(e.target.value).getTime() : null;
                     await updateTask(currentTaskId, { due_date: val });
                   }}
-                  className="w-full h-[34px] text-sm border border-neutral-200 dark:border-neutral-600 rounded-md px-3 bg-white dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-brand-300"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="w-full h-[34px] text-sm border border-neutral-200 dark:border-neutral-600 rounded-md px-3 bg-white dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-brand-300 relative z-[100001]"
                 />
               </div>
             </div>

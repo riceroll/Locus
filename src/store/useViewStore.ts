@@ -133,7 +133,11 @@ export const useViewStore = create<ViewState>((set, get) => ({
         : [];
       return {
         ...r,
-        filters: { rules },
+        filters: { 
+          rules,
+          actionableOnly: !!parsed.actionableOnly,
+          viewableOnly: !!parsed.viewableOnly,
+        },
       } as SavedView;
     });
     set({ views });

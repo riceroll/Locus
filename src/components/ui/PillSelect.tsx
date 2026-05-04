@@ -142,7 +142,7 @@ export function PillSelect({
         createPortal(
           <div
             ref={menuRef}
-            className="fixed z-[99998] min-w-[160px] max-h-[280px] overflow-y-auto bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl dark:shadow-neutral-900/40 py-1"
+            className="fixed z-[100001] min-w-[160px] max-h-[280px] overflow-y-auto bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl dark:shadow-neutral-900/40 py-1"
             style={{ top: menuPos.top, left: menuPos.left }}
           >
             {allOptions.map((opt, idx) => {
