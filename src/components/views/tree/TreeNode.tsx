@@ -13,6 +13,7 @@ import { t } from '../../../i18n';
 
 interface TreeNodeProps {
   node: Task & { children: any[] };
+  ghostIds?: Set<string>;
   isRoot?: boolean;
   isFirst?: boolean;
   isLast?: boolean;
@@ -24,7 +25,7 @@ interface TreeNodeProps {
   onAddSiblingBelow?: (title: string) => Promise<void>;
 }
 
-export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, isOnly = true, isOverlay = false, isSiblingDragging = false, canvasScale = 1, forcedCollapsedIds, onAddSiblingBelow }: TreeNodeProps) => {
+export const TreeNode = ({ node, ghostIds, isRoot = true, isFirst = true, isLast = true, isOnly = true, isOverlay = false, isSiblingDragging = false, canvasScale = 1, forcedCollapsedIds, onAddSiblingBelow }: TreeNodeProps) => {
   const hasChildren = node.children && node.children.length > 0;
   const isCollapsed = node.collapsed === 1 || (forcedCollapsedIds?.has(node.id.toString()) ?? false) || isOverlay;
   const { tasks, batchUpdatePositions, addTask } = useTaskStore();
@@ -234,6 +235,7 @@ export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, i
           task={node}  
           hasChildren={hasChildren} 
           isCollapsed={isCollapsed} 
+          isGhost={!!ghostIds?.has(node.id)}
           isRoot={isRoot}
           dragAttributes={attributes} 
           dragListeners={listeners} 
@@ -266,6 +268,7 @@ export const TreeNode = ({ node, isRoot = true, isFirst = true, isLast = true, i
                   isFirst={idx === 0}
                   isLast={idx === arr.length - 1} 
                   isOnly={arr.length === 1}
+                  ghostIds={ghostIds}
                   isSiblingDragging={!!activeChildId}
                   canvasScale={canvasScale}
                   forcedCollapsedIds={childForcedCollapsedIds ?? undefined}

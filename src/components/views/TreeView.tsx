@@ -28,6 +28,7 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useStatusStore } from '../../store/useStatusStore';
 import { applyTaskFilters } from '../../lib/taskFilters';
 import { Tooltip } from '../ui/Tooltip';
+import { ViewControls } from '../layout/ViewControls';
 import { Zap, Eye, ChevronsLeftRight, ChevronsRightLeft, Plus } from 'lucide-react';
 import { t } from '../../i18n';
 
@@ -51,7 +52,7 @@ type WebKitGestureEvent = Event & {
 
 export const TreeView = () => {
   const { tasks, batchUpdatePositions, updateTask, addTask } = useTaskStore();
-  const { mouseWheelZoom, invertMouseWheelZoom, language } = useSettingsStore();
+  const { mouseWheelZoom, invertMouseWheelZoom, language, enableVisibilityFeature } = useSettingsStore();
 
   const { activeFilters, setFilters } = useViewStore();
   const { projects } = useProjectStore();
@@ -85,7 +86,7 @@ export const TreeView = () => {
     return incomp;
   }, [tasks, doneSet]);
 
-  const filteredTasks = useMemo(() => {
+  const filteredTaskIds = useMemo(() => {
     let pool = applyTaskFilters(tasks, activeFilters, { projects });
     if (activeFilters.actionableOnly) {
       pool = pool.filter((t) => {
@@ -99,6 +100,49 @@ export const TreeView = () => {
     }
     return new Set(pool.map((t) => t.id));
   }, [tasks, activeFilters, projects, incompleteDescendants, doneSet]);
+
+  const { keepIds, ghostIds } = useMemo(() => {
+    const childrenMap = new Map<string, string[]>();
+    const rootIds: string[] = [];
+    for (const t of tasks) {
+      childrenMap.set(t.id, []);
+    }
+    for (const t of tasks) {
+      if (t.parent_id && childrenMap.has(t.parent_id)) {
+        childrenMap.get(t.parent_id)!.push(t.id);
+      } else {
+        rootIds.push(t.id);
+      }
+    }
+
+    const keep = new Set<string>();
+    const ghost = new Set<string>();
+
+    const walk = (id: string): boolean => {
+      const selfMatch = filteredTaskIds.has(id);
+      const children = childrenMap.get(id) || [];
+      let hasVisibleDescendant = false;
+      for (const childId of children) {
+        if (walk(childId)) {
+          hasVisibleDescendant = true;
+        }
+      }
+      const visible = selfMatch || hasVisibleDescendant;
+      if (visible) {
+        keep.add(id);
+        if (!selfMatch && hasVisibleDescendant) {
+          ghost.add(id);
+        }
+      }
+      return visible;
+    };
+
+    for (const rootId of rootIds) {
+      walk(rootId);
+    }
+
+    return { keepIds: keep, ghostIds: ghost };
+  }, [tasks, filteredTaskIds]);
 
   const parentTaskIds = useMemo(() => {
     return new Set(tasks.filter((t) => t.parent_id).map((t) => t.parent_id!));
@@ -202,6 +246,12 @@ export const TreeView = () => {
   const [activeDetailId, setActiveDetailId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (enableVisibilityFeature) return;
+    if (!activeFilters.viewableOnly) return;
+    setFilters({ ...activeFilters, viewableOnly: false });
+  }, [enableVisibilityFeature, activeFilters, setFilters]);
+
+  useEffect(() => {
     const handleOpenDetail = (e: Event) => {
       const customEvent = e as CustomEvent;
       setActiveDetailId(customEvent.detail.taskId);
@@ -294,26 +344,10 @@ export const TreeView = () => {
       map.set(t.id, { ...t, children: [] });
     }
 
-    const keepNode = new Set<string>();
-    const markKeep = (id: string) => {
-      let current: string | null = id;
-      while (current && !keepNode.has(current)) {
-        keepNode.add(current);
-        const node = map.get(current);
-        current = node?.parent_id || null;
-      }
-    };
-    
     for (const t of tasks) {
-      if (filteredTasks.has(t.id)) {
-        markKeep(t.id);
-      }
-    }
-
-    for (const t of tasks) {
-      if (!keepNode.has(t.id)) continue;
+      if (!keepIds.has(t.id)) continue;
       const node = map.get(t.id)!;
-      if (t.parent_id && map.has(t.parent_id) && keepNode.has(t.parent_id)) {
+      if (t.parent_id && map.has(t.parent_id) && keepIds.has(t.parent_id)) {
         map.get(t.parent_id)!.children.push(node);
       } else {
         roots.push(node);
@@ -321,7 +355,7 @@ export const TreeView = () => {
     }
 
     return roots;
-  }, [tasks, filteredTasks]);
+  }, [tasks, keepIds]);
 
   useEffect(() => {
     scaleRef.current = scale;
@@ -674,20 +708,22 @@ export const TreeView = () => {
             {t(language, 'btn_actionable')}
           </button>
         </Tooltip>
-        <Tooltip id="viewable">
-          <button
-            type="button"
-            onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
-            className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              activeFilters.viewableOnly
-                ? 'bg-brand-100 border-brand-300 text-brand-700'
-                : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            {t(language, 'btn_viewable')}
-          </button>
-        </Tooltip>
+        {enableVisibilityFeature && (
+          <Tooltip id="viewable">
+            <button
+              type="button"
+              onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
+              className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                activeFilters.viewableOnly
+                  ? 'bg-brand-100 border-brand-300 text-brand-700'
+                  : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              {t(language, 'btn_viewable')}
+            </button>
+          </Tooltip>
+        )}
         <Tooltip id="collapse-all">
           <button
             type="button"
@@ -708,6 +744,9 @@ export const TreeView = () => {
             {t(language, 'btn_expand_all')}
           </button>
         </Tooltip>
+        <div className="ml-auto">
+          <ViewControls />
+        </div>
       </div>
 
       <div
@@ -770,6 +809,7 @@ export const TreeView = () => {
                     isRoot={true}
                     isLast={idx === arr.length - 1}
                     canvasScale={scale}
+                    ghostIds={ghostIds}
                     isSiblingDragging={!!activeId}
                     forcedCollapsedIds={forcedCollapsedRootIds ?? undefined}
                     onAddSiblingBelow={(title) => addRootTaskAfter(root.id, title)}
@@ -788,6 +828,7 @@ export const TreeView = () => {
                         node={activeTree}
                         isRoot={activeTree.parent_id === null}
                         isOverlay={true}
+                        ghostIds={ghostIds}
                         canvasScale={scale}
                       />
                     </div>

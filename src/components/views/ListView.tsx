@@ -28,7 +28,12 @@ export const ListView = () => {
   const { tasks, isLoading, error, fetchTasks, addTask, addNextTask, updateTaskStatus, toggleCollapsed, deleteTask, deleteTaskRecursive, moveTask, batchUpdatePositions } = useTaskStore();
   const { isRunning, activeTaskId, elapsed, getAllEntries, startTimer, stopTimer } = useTimerStore();
   const { activeFilters, setFilters } = useViewStore();
-  const { language, showTotalTime } = useSettingsStore();
+  const { language, showTotalTime, enableVisibilityFeature } = useSettingsStore();
+    useEffect(() => {
+      if (enableVisibilityFeature) return;
+      if (!activeFilters.viewableOnly) return;
+      setFilters({ ...activeFilters, viewableOnly: false });
+    }, [enableVisibilityFeature, activeFilters, setFilters]);
   const { statuses, fetchStatuses, getDoneStatusId, getDefaultOpenStatusId } = useStatusStore();
   const { projects, fetchProjects } = useProjectStore();
 
@@ -605,20 +610,22 @@ export const ListView = () => {
             {t(language, 'btn_actionable')}
           </button>
         </Tooltip>
-        <Tooltip id="viewable">
-          <button
-            type="button"
-            onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
-            className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              activeFilters.viewableOnly
-                ? 'bg-brand-100 border-brand-300 text-brand-700'
-                : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            {t(language, 'btn_viewable')}
-          </button>
-        </Tooltip>
+        {enableVisibilityFeature && (
+          <Tooltip id="viewable">
+            <button
+              type="button"
+              onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
+              className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                activeFilters.viewableOnly
+                  ? 'bg-brand-100 border-brand-300 text-brand-700'
+                  : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-600'
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              {t(language, 'btn_viewable')}
+            </button>
+          </Tooltip>
+        )}
 
         {selectedTaskIds.size > 0 && (
           <button

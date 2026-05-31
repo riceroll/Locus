@@ -46,6 +46,10 @@ interface ResizeState {
   startY: number;
   origStartTime: number;
   origEndTime: number;
+  /** which day column the resize started in */
+  origDay: Date;
+  /** day index in current view at resize start */
+  origDayIndex: number;
   /** Live-updated ghost times shown during drag */
   ghostStartTime: number;
   ghostEndTime: number;
@@ -217,20 +221,24 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
     });
   }, [entries, days]);
 
-  const handleResizeStart = useCallback((entryId: string, edge: 'top' | 'bottom', e: React.MouseEvent, _columnDay: Date) => {
+  const handleResizeStart = useCallback((entryId: string, edge: 'top' | 'bottom', e: React.MouseEvent, columnDay: Date) => {
     e.preventDefault();
     const entry = entries.find((en) => en.id === entryId);
     if (!entry || (entry.isActive && edge === 'bottom')) return;
+    const resizeDay = startOfDay(columnDay);
+    const origDayIndex = Math.max(0, days.findIndex((d) => isSameDay(d, resizeDay)));
     setResize({
       entryId,
       edge,
       startY: e.clientY,
       origStartTime: entry.startTime,
       origEndTime: entry.endTime,
+      origDay: resizeDay,
+      origDayIndex,
       ghostStartTime: entry.startTime,
       ghostEndTime: entry.endTime,
     });
-  }, [entries]);
+  }, [entries, days]);
 
   useEffect(() => {
     if (!drag) return;
@@ -241,17 +249,47 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
       const hasMoved = drag.hasMoved || (deltaX * deltaX + deltaY * deltaY > 25);
       
       const deltaMs = (deltaY / hourHeight) * 3_600_000;
-      // Detect which day column is under cursor, then shift by whole days.
+      
+      // Detect which day column is under cursor for cross-day dragging
       let dayOffset = 0;
       const stack = document.elementsFromPoint(e.clientX, e.clientY);
       const dayColEl = stack.find((el) => (el as HTMLElement).dataset?.dayCol) as HTMLElement | undefined;
+      
       if (dayColEl?.dataset.dayCol) {
         const hoverDay = new Date(dayColEl.dataset.dayCol);
         const hoverDayIndex = days.findIndex((d) => isSameDay(d, hoverDay));
         if (hoverDayIndex >= 0) {
           dayOffset = hoverDayIndex - drag.origDayIndex;
         }
+      } else {
+        // Fallback: find nearest visible day column based on X coordinate
+        // This allows dragging across wider distances for cross-day support
+        const allDayCols = document.querySelectorAll('[data-day-col]');
+        let closestCol: Element | null = null;
+        let closestDistance = Infinity;
+        
+        allDayCols.forEach((col) => {
+          const rect = col.getBoundingClientRect();
+          const colCenterX = rect.left + rect.width / 2;
+          const distance = Math.abs(e.clientX - colCenterX);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestCol = col;
+          }
+        });
+        
+        if (closestCol) {
+          const dataset = (closestCol as HTMLElement).dataset;
+          if (dataset?.dayCol) {
+            const hoverDay = new Date(dataset.dayCol);
+            const hoverDayIndex = days.findIndex((d) => isSameDay(d, hoverDay));
+            if (hoverDayIndex >= 0) {
+              dayOffset = hoverDayIndex - drag.origDayIndex;
+            }
+          }
+        }
       }
+      
       const rawStart = drag.origStartTime + deltaMs + dayOffset * 86_400_000;
       const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
       const snapped = snapToMinutes(rawStart, snapMin);
@@ -297,12 +335,51 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
       const deltaMs = (deltaY / hourHeight) * 3_600_000;
       const snapMin = e.metaKey || e.ctrlKey ? 1 : 15;
       
+      // Detect which day column is under cursor for cross-day resizing
+      let dayOffset = 0;
+      const stack = document.elementsFromPoint(e.clientX, e.clientY);
+      const dayColEl = stack.find((el) => (el as HTMLElement).dataset?.dayCol) as HTMLElement | undefined;
+      
+      if (dayColEl?.dataset.dayCol) {
+        const hoverDay = new Date(dayColEl.dataset.dayCol);
+        const hoverDayIndex = days.findIndex((d) => isSameDay(d, hoverDay));
+        if (hoverDayIndex >= 0) {
+          dayOffset = hoverDayIndex - resize.origDayIndex;
+        }
+      } else {
+        // Fallback: find nearest visible day column based on X coordinate
+        const allDayCols = document.querySelectorAll('[data-day-col]');
+        let closestCol: Element | null = null;
+        let closestDistance = Infinity;
+        
+        allDayCols.forEach((col) => {
+          const rect = col.getBoundingClientRect();
+          const colCenterX = rect.left + rect.width / 2;
+          const distance = Math.abs(e.clientX - colCenterX);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            closestCol = col;
+          }
+        });
+        
+        if (closestCol) {
+          const dataset = (closestCol as HTMLElement).dataset;
+          if (dataset?.dayCol) {
+            const hoverDay = new Date(dataset.dayCol);
+            const hoverDayIndex = days.findIndex((d) => isSameDay(d, hoverDay));
+            if (hoverDayIndex >= 0) {
+              dayOffset = hoverDayIndex - resize.origDayIndex;
+            }
+          }
+        }
+      }
+      
       if (resize.edge === 'top') {
-        const newStart = snapToMinutes(resize.origStartTime + deltaMs, snapMin);
+        const newStart = snapToMinutes(resize.origStartTime + deltaMs + dayOffset * 86_400_000, snapMin);
         const clamped = Math.min(newStart, resize.origEndTime - MIN_DURATION);
         setResize((prev) => prev ? { ...prev, ghostStartTime: clamped } : null);
       } else {
-        const newEnd = snapToMinutes(resize.origEndTime + deltaMs, snapMin);
+        const newEnd = snapToMinutes(resize.origEndTime + deltaMs + dayOffset * 86_400_000, snapMin);
         const clamped = Math.max(newEnd, resize.origStartTime + MIN_DURATION);
         setResize((prev) => prev ? { ...prev, ghostEndTime: clamped } : null);
       }
@@ -324,7 +401,7 @@ export const CalendarGrid = ({ onEntryClick, onSlotClick, refreshKey = 0, dropIn
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [resize, hourHeight, updateEntry]);
+  }, [resize, hourHeight, updateEntry, days]);
 
   // ── Draw-to-create (mousedown on empty grid background) ──────────────────────
   const handleDrawStart = useCallback((anchorTime: number, day: Date, e: React.MouseEvent) => {

@@ -5,8 +5,9 @@ import { useProjectStore } from '../../store/useProjectStore';
 import { useStatusStore } from '../../store/useStatusStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { t } from '../../i18n';
-import { Square, Search, Briefcase, Plus } from 'lucide-react';
+import { Square, Search, Briefcase, Plus, Clock3, Flag, Maximize2 } from 'lucide-react';
 import { TaskDetailModal } from '../views/TaskDetailModal';
+import { FocusMode } from './FocusMode';
 
 // Score a task for suggestion ranking given a query string
 function scoreTask(task: { title: string; updated_at: number; status_id: string }, query: string, doneStatusIds: Set<string>): number {
@@ -29,13 +30,33 @@ function scoreTask(task: { title: string; updated_at: number; status_id: string 
 
 export const TimerBar = () => {
   const { isRunning, activeTaskId, activeTaskTitle, elapsed, startTimer, stopTimer } = useTimerStore();
-  const { tasks, updateTask, updateTaskProject, addTask } = useTaskStore();
-  const { projects } = useProjectStore();
-  const { statuses } = useStatusStore();
+  const { tasks, fetchTasks, updateTask, updateTaskProject, addTask } = useTaskStore();
+  const { projects, fetchProjects } = useProjectStore();
+  const { statuses, fetchStatuses } = useStatusStore();
   const { language } = useSettingsStore();
 
   const activeTask = activeTaskId ? tasks.find((t) => t.id === activeTaskId) : null;
+  const activeStatus = activeTask ? statuses.find((s) => s.id === activeTask.status_id) : null;
   const [showTaskDetail, setShowTaskDetail] = useState(false);
+  const [showFocusMode, setShowFocusMode] = useState(false);
+
+  const estimatedCompletionText = useMemo(() => {
+    if (!isRunning || !activeTask || activeTask.estimate == null) return null;
+    const estimateSec = activeTask.estimate * 60;
+    const remainingSec = Math.max(0, estimateSec - elapsed);
+    const eta = new Date(Date.now() + remainingSec * 1000);
+    const hour = eta.getHours().toString().padStart(2, '0');
+    const minute = eta.getMinutes().toString().padStart(2, '0');
+    return `${hour}:${minute}`;
+  }, [isRunning, activeTask, elapsed]);
+
+  // TimerBar is global and mounted before some views trigger store fetches.
+  // Load minimal data here so active task project/status can render reliably.
+  useEffect(() => {
+    if (tasks.length === 0) void fetchTasks();
+    if (projects.length === 0) void fetchProjects();
+    if (statuses.length === 0) void fetchStatuses();
+  }, [tasks.length, projects.length, statuses.length, fetchTasks, fetchProjects, fetchStatuses]);
 
   // Active timer title editing
   const [draftTitle, setDraftTitle] = useState('');
@@ -241,6 +262,18 @@ export const TimerBar = () => {
       </div>
 
       <div className="relative z-10 flex items-center gap-5 shrink-0 px-2">
+        {isRunning && activeTask && activeStatus && (
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold"
+            style={{
+              backgroundColor: `${activeStatus.color || '#64748b'}1A`,
+              color: activeStatus.color || '#64748b',
+            }}
+          >
+            <Flag className="w-3.5 h-3.5" />
+            {activeStatus.name}
+          </span>
+        )}
         {isRunning && activeTask && (
           <div className="relative inline-flex shrink-0 group/project">
             {activeTask.project_id ? (() => {
@@ -256,7 +289,7 @@ export const TimerBar = () => {
                 </span>
               );
             })() : (
-              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500 cursor-pointer px-2.5 py-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-200 cursor-pointer px-2.5 py-1 rounded-md bg-white/35 dark:bg-white/10 hover:bg-neutral-100 dark:hover:bg-white/20 transition-colors">
                 <Briefcase className="w-3.5 h-3.5" />
                 {t(language, 'no_project')}
               </span>
@@ -271,10 +304,26 @@ export const TimerBar = () => {
             </select>
           </div>
         )}
+        {isRunning && (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold text-neutral-600 dark:text-neutral-300 bg-white/40 dark:bg-black/20 border border-black/5 dark:border-white/10">
+            <Clock3 className="w-3.5 h-3.5" />
+            {estimatedCompletionText ? `ETA ${estimatedCompletionText}` : 'ETA --:--'}
+          </span>
+        )}
         <div className={`flex items-center gap-3 rounded-lg pr-1 pl-3 transition-all ${isRunning ? 'bg-white/50 dark:bg-black/20 shadow-inner shadow-black/5 dark:shadow-white/5 border border-black/5 dark:border-white/5' : ''}`}>
           <span className={`font-mono text-[14px] leading-none font-bold tabular-nums tracking-wide transition-colors duration-500 ${isRunning ? 'text-brand-700 dark:text-brand-300' : 'text-neutral-300 dark:text-neutral-700'}`}>
             {isRunning ? formatDuration(elapsed) : '00:00:00'}
           </span>
+          {isRunning && (
+            <button
+              type="button"
+              onClick={() => setShowFocusMode(true)}
+              className="flex items-center justify-center w-7 h-7 rounded-md bg-brand-500/10 hover:bg-brand-500 hover:text-white text-brand-500 transition-all shadow-sm"
+              title="专注模式"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button
             onClick={stopTimer}
             className={`flex items-center justify-center w-7 h-7 rounded-md transition-all ${
@@ -296,6 +345,7 @@ export const TimerBar = () => {
           onClose={() => setShowTaskDetail(false)} 
         />
       )}
+      {showFocusMode && <FocusMode onClose={() => setShowFocusMode(false)} />}
     </div>
   );
 };

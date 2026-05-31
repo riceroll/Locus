@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
+  MeasuringStrategy,
   PointerSensor,
   useDroppable,
   useSensor,
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
+  type DragMoveEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -143,6 +145,7 @@ export const KanbanView = () => {
   const [collapsedCols, setCollapsedCols] = useState<Record<string, boolean>>({});
   const [taskTimeTotals, setTaskTimeTotals] = useState<Record<string, number>>({});
   const colResizingId = useRef<string | null>(null);
+  const lastPointerY = useRef<number>(0);
   
   // Canvas drag references
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
@@ -339,10 +342,24 @@ export const KanbanView = () => {
   const activeTask = activeId && activeType === 'task' ? tasks.find((t) => t.id === activeId) : null;
   const activeColumn = activeId && activeType === 'column' ? columns.find((c) => c.id === activeId) : null;
 
+
   const handleDragStart = (e: DragStartEvent) => {
     const type = e.active.data.current?.type as 'task' | 'column' | undefined;
     setActiveId(e.active.id as string);
     setActiveType(type || 'task');
+  };
+
+  const handleDragMove = (e: DragMoveEvent) => {
+    const evt = e.activatorEvent;
+    if (evt instanceof PointerEvent) {
+      lastPointerY.current = evt.clientY;
+    } else if (evt instanceof MouseEvent) {
+      lastPointerY.current = evt.clientY;
+    }
+    const translated = e.active.rect.current.translated;
+    if (translated) {
+      lastPointerY.current = translated.top + translated.height / 2;
+    }
   };
 
   const handleDragEnd = async (e: DragEndEvent) => {
@@ -403,12 +420,8 @@ export const KanbanView = () => {
       if (!isColumnEndDrop && !columnIds.includes(overId)) {
         const overIndex = targetTasks.findIndex((t) => t.id === overId);
         if (overIndex !== -1) {
-          // For cross-column drops, place after hovered card when dropping in its lower half.
           const overMidY = over.rect.top + over.rect.height / 2;
-          const activeY = e.activatorEvent instanceof MouseEvent
-            ? e.activatorEvent.clientY
-            : (e.active.rect.current.translated?.top ?? e.active.rect.current.initial?.top ?? overMidY);
-          insertIdx = activeY >= overMidY ? overIndex + 1 : overIndex;
+          insertIdx = lastPointerY.current >= overMidY ? overIndex + 1 : overIndex;
         }
       }
       
@@ -493,7 +506,9 @@ export const KanbanView = () => {
       <DndContext
         sensors={sensors}
         collisionDetection={typedCollisionDetection}
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>

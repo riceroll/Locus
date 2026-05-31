@@ -179,7 +179,7 @@ export const Column = ({
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setIsEditing(true)}
-            className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-neutral-100 text-left truncate flex-1"
+            className="text-sm font-semibold text-neutral-700 dark:text-neutral-200 hover:text-neutral-900 dark:hover:text-neutral-100 text-left truncate max-w-[180px] shrink-0"
             title={t(language, 'tooltip_click_to_rename')}
           >
             {name}

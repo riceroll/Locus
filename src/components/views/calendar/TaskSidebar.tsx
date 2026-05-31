@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { ChevronLeft, ChevronRight, SortAsc, SortDesc, Zap, Eye } from 'lucide-react';
 import { Tooltip } from '../../ui/Tooltip';
@@ -72,7 +72,13 @@ export const TaskSidebar = ({ collapsed, onToggleCollapsed, onTaskClick }: Props
   const { projects } = useProjectStore();
   const { statuses } = useStatusStore();
   
-  const { language } = useSettingsStore();
+  const { language, enableVisibilityFeature } = useSettingsStore();
+
+  useEffect(() => {
+    if (enableVisibilityFeature) return;
+    if (!activeFilters.viewableOnly) return;
+    setFilters({ ...activeFilters, viewableOnly: false });
+  }, [enableVisibilityFeature, activeFilters, setFilters]);
 
   const [sidebarWidth, setSidebarWidth] = useState(288);
   const startXRef = useRef(0);
@@ -197,20 +203,22 @@ export const TaskSidebar = ({ collapsed, onToggleCollapsed, onTaskClick }: Props
                 {t(language, 'btn_actionable')}
               </button>
             </Tooltip>
-            <Tooltip id="viewable_sidebar">
-              <button
-                type="button"
-                onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
-                className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full border transition-colors ${
-                  activeFilters.viewableOnly
-                    ? 'bg-brand-100 border-brand-300 text-brand-700'
-                    : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300'
-                }`}
-              >
-                <Eye className="w-3 h-3" />
-                {t(language, 'btn_viewable')}
-              </button>
-            </Tooltip>
+            {enableVisibilityFeature && (
+              <Tooltip id="viewable_sidebar">
+                <button
+                  type="button"
+                  onClick={() => setFilters({ ...activeFilters, viewableOnly: !activeFilters.viewableOnly, actionableOnly: false })}
+                  className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-full border transition-colors ${
+                    activeFilters.viewableOnly
+                      ? 'bg-brand-100 border-brand-300 text-brand-700'
+                      : 'bg-white dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-300'
+                  }`}
+                >
+                  <Eye className="w-3 h-3" />
+                  {t(language, 'btn_viewable')}
+                </button>
+              </Tooltip>
+            )}
           </div>
 
           <div className="relative group/sort">

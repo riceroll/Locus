@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock } from 'lucide-react';
+import { Hourglass } from 'lucide-react';
 import { formatEstimate } from '../../lib/utils';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { t } from '../../i18n';
@@ -43,9 +43,10 @@ function saveRecent(val: number) {
 interface EstimatePickerProps {
   value: number | null;
   onChange: (val: number | null) => Promise<void> | void;
+  compact?: boolean;
 }
 
-export function EstimatePicker({ value, onChange }: EstimatePickerProps) {
+export function EstimatePicker({ value, onChange, compact = false }: EstimatePickerProps) {
   const { language } = useSettingsStore();
   const [open, setOpen] = useState(false);
   const [inputVal, setInputVal] = useState('');
@@ -79,7 +80,7 @@ export function EstimatePicker({ value, onChange }: EstimatePickerProps) {
 
   useEffect(() => {
     if (!open) return;
-    const onMouse = (e: MouseEvent) => {
+    const onPointer = (e: PointerEvent) => {
       if (
         !triggerRef.current?.contains(e.target as Node) &&
         !menuRef.current?.contains(e.target as Node)
@@ -88,10 +89,10 @@ export function EstimatePicker({ value, onChange }: EstimatePickerProps) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closePicker();
     };
-    document.addEventListener('mousedown', onMouse);
+    document.addEventListener('pointerdown', onPointer);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onMouse);
+      document.removeEventListener('pointerdown', onPointer);
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
@@ -102,9 +103,11 @@ export function EstimatePicker({ value, onChange }: EstimatePickerProps) {
         ref={triggerRef}
         type="button"
         onClick={open ? closePicker : openPicker}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-neutral-200 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500 transition-colors"
+        className={`inline-flex items-center rounded-md font-medium border border-neutral-200 dark:border-neutral-600 bg-neutral-50 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-neutral-500 transition-colors ${
+          compact ? 'w-auto gap-1 px-1.5 py-0.5 text-[11px]' : 'gap-1.5 px-2.5 py-1 text-xs'
+        }`}
       >
-        <Clock className="w-3 h-3 opacity-50 flex-shrink-0" />
+        <Hourglass className={`${compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} opacity-50 flex-shrink-0`} />
         {value != null ? (
           <span>{formatEstimate(value)}</span>
         ) : (

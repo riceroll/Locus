@@ -37,6 +37,12 @@ interface PillSelectProps {
   nullable?: boolean;
   /** Label shown when value is null or no match found */
   placeholder?: string;
+  /** Compact trigger size for dense contexts like task cards. */
+  compact?: boolean;
+  /** Whether to show chevron in trigger. */
+  showChevron?: boolean;
+  /** Whether to show leading icon/dot in trigger and menu rows. */
+  showIcon?: boolean;
 }
 
 export function PillSelect({
@@ -45,6 +51,9 @@ export function PillSelect({
   onChange,
   nullable = false,
   placeholder = '—',
+  compact = false,
+  showChevron = true,
+  showIcon = true,
 }: PillSelectProps) {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
@@ -81,7 +90,7 @@ export function PillSelect({
 
   useEffect(() => {
     if (!open) return;
-    const onMouse = (e: MouseEvent) => {
+    const onPointer = (e: PointerEvent) => {
       if (
         !triggerRef.current?.contains(e.target as Node) &&
         !menuRef.current?.contains(e.target as Node)
@@ -102,10 +111,10 @@ export function PillSelect({
         void pick(allOptions[highlightIdx]?.value ?? '');
       }
     };
-    document.addEventListener('mousedown', onMouse);
+    document.addEventListener('pointerdown', onPointer);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onMouse);
+      document.removeEventListener('pointerdown', onPointer);
       document.removeEventListener('keydown', onKey);
     };
   }, [open, highlightIdx, allOptions]);
@@ -118,7 +127,11 @@ export function PillSelect({
         ref={triggerRef}
         type="button"
         onClick={open ? closeMenu : openMenu}
-        className="inline-flex w-full min-w-0 items-center justify-between gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all border"
+        className={`inline-flex min-w-0 items-center ${showChevron ? 'justify-between' : 'justify-start'} rounded-md font-medium transition-all border ${
+          compact
+            ? 'w-auto max-w-[132px] gap-1 px-1.5 py-0.5 text-[11px]'
+            : 'w-full gap-1.5 px-2.5 py-1 text-xs'
+        }`}
         style={
           color
             ? { backgroundColor: color + '22', color, borderColor: color + '55' }
@@ -130,12 +143,14 @@ export function PillSelect({
         <style>{`button[data-no-color]{background:#f4f4f5;border-color:#e4e4e7;color:#52525b;}
           .dark button[data-no-color]{background:#3f3f46;border-color:#52525b;color:#a1a1aa;}`}</style>
         <span className="inline-flex min-w-0 items-center gap-1.5">
-          {color && (
+          {showIcon && color && (
             <PillIcon opt={selected} size="xs" />
           )}
           <span className="truncate">{selected?.label ?? placeholder}</span>
         </span>
-        <ChevronDown className="w-3 h-3 opacity-50 flex-shrink-0 ml-0.5" />
+        {showChevron && (
+          <ChevronDown className={`${compact ? 'w-2.5 h-2.5' : 'w-3 h-3'} opacity-50 flex-shrink-0 ml-0.5`} />
+        )}
       </button>
 
       {open && menuPos &&
@@ -160,11 +175,12 @@ export function PillSelect({
                   onMouseEnter={() => setHighlightIdx(idx)}
                   onClick={() => void pick(opt.value)}
                 >
-                  {opt.color || opt.icon_type ? (
+                  {showIcon && (opt.color || opt.icon_type ? (
                     <PillIcon opt={opt} size="xs" />
                   ) : (
                     <span className="w-2 h-2 rounded-full flex-shrink-0 bg-neutral-300 dark:bg-neutral-600" />
-                  )}                  <span
+                  ))}
+                  <span
                     className={`flex-1 text-xs ${isSelected ? 'font-semibold' : 'font-normal'}`}
                     style={opt.color && opt.value ? { color: opt.color } : { color: '#71717a' }}
                   >

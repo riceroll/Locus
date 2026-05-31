@@ -21,7 +21,7 @@ export const ViewControls = () => {
   const { statuses, fetchStatuses } = useStatusStore();
   const { projects, fetchProjects } = useProjectStore();
   const { areas, fetchAreas } = useAreaStore();
-  const { language } = useSettingsStore();
+  const { language, enableVisibilityFeature } = useSettingsStore();
 
   const [open, setOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState<ViewFilters>({
@@ -69,6 +69,14 @@ export const ViewControls = () => {
       viewableOnly: activeFilters.viewableOnly ?? false,
     });
   }, [activeFilters]);
+
+  useEffect(() => {
+    if (enableVisibilityFeature) return;
+    if (!activeFilters.viewableOnly && !draftFilters.viewableOnly) return;
+    const sanitized = { ...activeFilters, viewableOnly: false };
+    setFilters(sanitized);
+    setDraftFilters((prev) => ({ ...prev, viewableOnly: false }));
+  }, [enableVisibilityFeature, activeFilters, draftFilters.viewableOnly, setFilters]);
 
   const statusOptions = useMemo(() => statuses.map((s) => ({ value: s.id, label: s.name })), [statuses]);
   const projectOptions = useMemo(() => projects.map((p) => ({ value: p.id, label: p.name })), [projects]);
@@ -287,17 +295,19 @@ export const ViewControls = () => {
               >
                 {t(language, 'filter_actionable_only')}
               </button>
-              <button
-                type="button"
-                onClick={() => setDraftFilters({ ...draftFilters, viewableOnly: !draftFilters.viewableOnly })}
-                className={`text-xs px-3 py-1.5 rounded-full transition-all border ${
-                  draftFilters.viewableOnly
-                    ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700/50 dark:text-brand-300 font-medium'
-                    : 'bg-white border-slate-200 text-slate-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400 hover:border-slate-300 dark:hover:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-700/50'
-                }`}
-              >
-                {t(language, 'filter_viewable_only')}
-              </button>
+              {enableVisibilityFeature && (
+                <button
+                  type="button"
+                  onClick={() => setDraftFilters({ ...draftFilters, viewableOnly: !draftFilters.viewableOnly })}
+                  className={`text-xs px-3 py-1.5 rounded-full transition-all border ${
+                    draftFilters.viewableOnly
+                      ? 'bg-brand-50 border-brand-200 text-brand-700 dark:bg-brand-900/30 dark:border-brand-700/50 dark:text-brand-300 font-medium'
+                      : 'bg-white border-slate-200 text-slate-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400 hover:border-slate-300 dark:hover:border-neutral-600 hover:bg-slate-50 dark:hover:bg-neutral-700/50'
+                  }`}
+                >
+                  {t(language, 'filter_viewable_only')}
+                </button>
+              )}
             </div>
 
             <div className="mt-3 flex gap-2">

@@ -13,6 +13,7 @@ export const SettingsModal = ({ onClose }: Props) => {
     accentColor,
     appName,
     language,
+    enableVisibilityFeature,
     showKanbanEstimate,
     showKanbanSubtasks,
     kanbanCanvasDrag,
@@ -24,6 +25,7 @@ export const SettingsModal = ({ onClose }: Props) => {
     setAccentColor,
     setAppName,
     setLanguage,
+    setEnableVisibilityFeature,
     setShowKanbanEstimate,
     setShowKanbanSubtasks,
     setKanbanCanvasDrag,
@@ -113,6 +115,16 @@ export const SettingsModal = ({ onClose }: Props) => {
             <div className="mt-4">
               <label className="text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-2 block">{t(language, 'kanban_card_display')}</label>
               <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setEnableVisibilityFeature(!enableVisibilityFeature)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-600 hover:border-neutral-300 dark:hover:border-neutral-500 transition text-sm"
+                >
+                  <span className="text-neutral-700 dark:text-neutral-200">Show Hide/Visibility Features</span>
+                  <span className={`inline-flex h-5 w-9 rounded-full transition ${enableVisibilityFeature ? 'bg-brand-500 justify-end' : 'bg-neutral-300 dark:bg-neutral-600 justify-start'} p-0.5`}>
+                    <span className="h-4 w-4 rounded-full bg-white" />
+                  </span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowKanbanEstimate(!showKanbanEstimate)}
