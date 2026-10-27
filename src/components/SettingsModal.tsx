@@ -21,6 +21,7 @@ export const SettingsModal = ({ onClose }: Props) => {
     showTotalTime,
     mouseWheelZoom,
     invertMouseWheelZoom,
+    maxTitleLines,
     setTheme,
     setAccentColor,
     setAppName,
@@ -33,6 +34,7 @@ export const SettingsModal = ({ onClose }: Props) => {
     setShowTotalTime,
     setMouseWheelZoom,
     setInvertMouseWheelZoom,
+    setMaxTitleLines,
   } = useSettingsStore();
 
   const THEME_OPTIONS: { value: ThemeMode; label: string; Icon: React.FC<{ className?: string }> }[] = [
@@ -166,6 +168,27 @@ export const SettingsModal = ({ onClose }: Props) => {
                   </span>
                 </button>
               </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="text-xs font-medium text-neutral-600 dark:text-neutral-300 mb-2 block">Max Title Lines</label>
+              <div className="flex gap-2">
+                {[1, 2, 3].map((lines) => (
+                  <button
+                    key={lines}
+                    type="button"
+                    onClick={() => setMaxTitleLines(lines)}
+                    className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
+                      maxTitleLines === lines
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
+                        : 'border-neutral-200 dark:border-neutral-600 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'
+                    }`}
+                  >
+                    {lines}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1">Maximum number of lines for task titles in Tree and Kanban views.</p>
             </div>
 
               {/* Task Tree Settings */}

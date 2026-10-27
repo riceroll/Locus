@@ -46,7 +46,7 @@ export const TaskCardCore = ({
   const { statuses } = useStatusStore();
   const { updateTaskStatus, updateTask, toggleVisible, tasks } = useTaskStore();
   const { isRunning, activeTaskId, startTimer, stopTimer, addManualEntry } = useTimerStore();
-  const { showKanbanEstimate, showKanbanSubtasks, enableVisibilityFeature } = useSettingsStore();
+  const { showKanbanEstimate, showKanbanSubtasks, enableVisibilityFeature, maxTitleLines = 2 } = useSettingsStore();
   const [showSpentMenu, setShowSpentMenu] = useState(false);
   const [showPriorityMenu, setShowPriorityMenu] = useState(false);
   const [priorityMenuPos, setPriorityMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -192,9 +192,21 @@ export const TaskCardCore = ({
                 if (onOpenDetail) onOpenDetail(task.id);
                 else window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { taskId: task.id } }));
               }}
-              className={`flex-1 min-w-0 truncate whitespace-nowrap text-sm font-medium text-left hover:text-brand-600 hover:underline transition ${
-                isDone ? 'line-through text-slate-400 dark:text-neutral-500' : isHidden ? 'text-slate-400 dark:text-neutral-500' : 'text-slate-800 dark:text-neutral-200'
-              }`}
+              style={
+                maxTitleLines > 1
+                  ? {
+                      display: '-webkit-box',
+                      WebkitLineClamp: maxTitleLines,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                    }
+                  : undefined
+              }
+              className={`flex-1 min-w-0 text-sm font-medium text-left hover:text-brand-600 hover:underline transition ${
+                maxTitleLines === 1 ? 'truncate whitespace-nowrap ' : ''
+              }${isDone ? 'line-through text-slate-400 dark:text-neutral-500' : isHidden ? 'text-slate-400 dark:text-neutral-500' : 'text-slate-800 dark:text-neutral-200'}`}
               title={task.title}
             >
               {task.title}
